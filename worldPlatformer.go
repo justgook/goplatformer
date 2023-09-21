@@ -162,6 +162,38 @@ func (a *AnimSprite) Update() {
 	a.currentFrame++
 }
 
+type embededImageLoader struct {
+	tilesets map[string]*ebiten.Image
+}
+
+//go:embed asset/tileset.png
+var tilesetPng1 []byte
+
+//go:embed asset/tileset2.png
+var tilesetPng2 []byte
+
+func NewTilesetLoader() *embededImageLoader {
+	img1, _, err := image.Decode(bytes.NewReader(tilesetPng1))
+	if err != nil {
+		log.Fatal(err)
+	}
+	img2, _, err := image.Decode(bytes.NewReader(tilesetPng2))
+	if err != nil {
+		log.Fatal(err)
+	}
+	return &embededImageLoader{
+		tilesets: map[string]*ebiten.Image{
+			"tileset.png":  ebiten.NewImageFromImage(img1),
+			"tileset2.png": ebiten.NewImageFromImage(img2),
+		},
+	}
+
+}
+
+func (d *embededImageLoader) LoadTileset(tilesetPath string) *ebiten.Image {
+	return d.tilesets[tilesetPath]
+}
+
 //go:embed asset/example.ldtk
 var exampleLevel []byte
 
@@ -177,7 +209,7 @@ func (world *WorldPlatformer) initLevel() {
 	// Create a new renderer...
 	// EbitenRenderer.DiskLoader loads images from disk using ebitenutil.NewImageFromFile() and takes an argument of the base path to use when loading.
 	// We pass a blank string to NewDiskLoader() because for the example, the assets are in the same directory.
-	world.TileMapRenderer = NewEbitenRenderer(NewDiskLoader("asset"))
+	world.TileMapRenderer = NewEbitenRenderer(NewTilesetLoader())
 
 	// ... And render the tiles for the level out to layers, which will be *ebiten.Images. We'll retrieve them to draw in a Draw() loop later.
 	world.TileMapRenderer.Render(level)
@@ -219,8 +251,8 @@ func (world *WorldPlatformer) Init() {
 	// The floating platform moves using a *gween.Sequence sequence of tweens, moving it back and forth.
 	world.FloatingPlatformTween = gween.NewSequence()
 	world.FloatingPlatformTween.Add(
-		gween.New(float32(world.FloatingPlatform.Y), float32(world.FloatingPlatform.Y-128), 2, ease.Linear),
-		gween.New(float32(world.FloatingPlatform.Y-128), float32(world.FloatingPlatform.Y), 2, ease.Linear),
+		gween.New(float32(world.FloatingPlatform.Y)-48, float32(world.FloatingPlatform.Y-128), 2, ease.Linear),
+		gween.New(float32(world.FloatingPlatform.Y-128), float32(world.FloatingPlatform.Y)-48, 2, ease.Linear),
 	)
 	world.Space.Add(world.FloatingPlatform)
 
@@ -262,7 +294,7 @@ func (world *WorldPlatformer) Update() {
 	}
 	world.FloatingPlatform.Update()
 
-	// Now we update the Player's movement. This is the real bread-and-butter of this example, naturally.
+	// Now we update the Player's movement. This is the real bread-an-butter of this example, naturally.
 	player := world.Player
 
 	friction := 0.5
