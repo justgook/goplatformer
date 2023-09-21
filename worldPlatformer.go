@@ -173,7 +173,8 @@ func (world *WorldPlatformer) Update() {
 	}
 
 	// Check for jumping.
-	if inpututil.IsKeyJustPressed(ebiten.KeyX) || ebiten.IsGamepadButtonPressed(0, 0) || ebiten.IsGamepadButtonPressed(1, 0) {
+	jumpKeyJustPressed := inpututil.IsKeyJustPressed(ebiten.KeyX) || inpututil.IsKeyJustPressed(ebiten.KeySpace)
+	if jumpKeyJustPressed || ebiten.IsGamepadButtonPressed(0, 0) || ebiten.IsGamepadButtonPressed(1, 0) {
 		if (ebiten.IsKeyPressed(ebiten.KeyDown) || ebiten.GamepadAxisValue(0, 1) > 0.1 || ebiten.GamepadAxisValue(1, 1) > 0.1) && player.OnGround != nil && player.OnGround.HasTags("platform") {
 			player.IgnorePlatform = player.OnGround
 		} else {
