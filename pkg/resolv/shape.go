@@ -59,7 +59,7 @@ type collidingLine struct {
 	Start, End vector.Vector
 }
 
-func new_line(x, y, x2, y2 float64) *collidingLine {
+func newLine(x, y, x2, y2 float64) *collidingLine {
 	return &collidingLine{
 		Start: vector.Vector{x, y},
 		End:   vector.Vector{x2, y2},
@@ -81,9 +81,7 @@ func (line *collidingLine) Vector() vector.Vector {
 
 // IntersectionPointsLine returns the intersection point of a Line with another Line as a vector.Vector. If no intersection is found, it will return nil.
 func (line *collidingLine) IntersectionPointsLine(other *collidingLine) vector.Vector {
-
 	det := (line.End[0]-line.Start[0])*(other.End[1]-other.Start[1]) - (other.End[0]-other.Start[0])*(line.End[1]-line.Start[1])
-
 	if det != 0 {
 
 		// MAGIC MATH; the extra + 1 here makes it so that corner cases (literally, lines going through corners) works.
@@ -248,7 +246,7 @@ func (cp *ConvexPolygon) Lines() []*collidingLine {
 			break
 		}
 
-		line := new_line(start[0], start[1], end[0], end[1])
+		line := newLine(start[0], start[1], end[0], end[1])
 
 		lines = append(lines, line)
 
@@ -378,7 +376,7 @@ func (cp *ConvexPolygon) SATAxes() []vector.Vector {
 // PointInside returns if a Point (a vector.Vector) is inside the ConvexPolygon.
 func (polygon *ConvexPolygon) PointInside(point vector.Vector) bool {
 
-	pointLine := new_line(point[0], point[1], point[0]+999999999999, point[1])
+	pointLine := newLine(point[0], point[1], point[0]+999999999999, point[1])
 
 	contactCount := 0
 

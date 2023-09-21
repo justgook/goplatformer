@@ -9,13 +9,12 @@ import (
 	"errors"
 	"fmt"
 	"image/color"
-	"time"
 
 	"github.com/golang/freetype/truetype"
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/hajimehoshi/ebiten/v2/text"
+	"github.com/hajimehoshi/ebiten/v2/vector"
 	"github.com/justgook/goplatformer/pkg/resolv"
 	"golang.org/x/image/font"
 )
@@ -24,26 +23,27 @@ import (
 var excelFont []byte
 
 type Game struct {
-	Worlds        []WorldInterface
+	Worlds        []StageInterface
+	Stage         *StageInterface
 	CurrentWorld  int
 	Width, Height int
 	Debug         bool
 	ShowHelpText  bool
-	Screen        *ebiten.Image
 	FontFace      font.Face
 }
 
 func NewGame() *Game {
-	ebiten.SetWindowResizable(true)
-	ebiten.SetWindowTitle("resolv test")
+	ebiten.SetWindowResizingMode(ebiten.WindowResizingModeEnabled)
+	ebiten.SetWindowTitle("go Platformer")
 
 	g := &Game{
 		Width:        640,
 		Height:       360,
 		ShowHelpText: false,
+		Debug:        false,
 	}
 
-	g.Worlds = []WorldInterface{
+	g.Worlds = []StageInterface{
 		NewWorldPlatformer(g),
 		NewWorldBouncer(g),
 		NewWorldLineTest(g),
@@ -55,14 +55,13 @@ func NewGame() *Game {
 	g.FontFace = truetype.NewFace(fontData, &truetype.Options{Size: 10})
 
 	// Debug FPS rendering
-
-	go func() {
-		for {
-			fmt.Println("FPS: ", ebiten.CurrentFPS())
-			fmt.Println("Ticks: ", ebiten.CurrentTPS())
-			time.Sleep(time.Second)
-		}
-	}()
+	//go func() {
+	//	for {
+	//		fmt.Println("FPS: ", ebiten.ActualFPS())
+	//		fmt.Println("Ticks: ", ebiten.ActualTPS())
+	//		time.Sleep(time.Second)
+	//	}
+	//}()
 
 	return g
 }
@@ -71,10 +70,10 @@ func (g *Game) Update() error {
 	var quit error
 
 	if inpututil.IsKeyJustPressed(ebiten.KeyP) {
-		if ebiten.CurrentTPS() >= 60 {
-			ebiten.SetMaxTPS(6)
+		if ebiten.ActualTPS() >= 60 {
+			ebiten.SetTPS(6)
 		} else {
-			ebiten.SetMaxTPS(60)
+			ebiten.SetTPS(60)
 		}
 	}
 
@@ -120,19 +119,27 @@ func (g *Game) Update() error {
 }
 
 func (g *Game) Draw(screen *ebiten.Image) {
-	g.Screen = screen
-	screen.Fill(color.RGBA{20, 20, 40, 255})
+	screen.Fill(color.RGBA{R: 20, G: 20, B: 40, A: 255})
 	g.Worlds[g.CurrentWorld].Draw(screen)
 }
 
 func (g *Game) DrawText(screen *ebiten.Image, x, y int, textLines ...string) {
 	rectHeight := 10
 	for _, txt := range textLines {
-		w := float64(font.MeasureString(g.FontFace, txt).Round())
-		ebitenutil.DrawRect(screen, float64(x), float64(y-8), w, float64(rectHeight), color.RGBA{0, 0, 0, 192})
+		w := float32(font.MeasureString(g.FontFace, txt).Round())
 
-		text.Draw(screen, txt, g.FontFace, x+1, y+1, color.RGBA{0, 0, 150, 255})
-		text.Draw(screen, txt, g.FontFace, x, y, color.RGBA{100, 150, 255, 255})
+		vector.DrawFilledRect(
+			screen,
+			float32(x),
+			float32(y-8),
+			w,
+			float32(rectHeight),
+			color.RGBA{A: 192},
+			false,
+		)
+
+		text.Draw(screen, txt, g.FontFace, x+1, y+1, color.RGBA{B: 150, A: 255})
+		text.Draw(screen, txt, g.FontFace, x, y, color.RGBA{R: 100, G: 150, B: 255, A: 255})
 		y += rectHeight
 	}
 }
@@ -142,24 +149,20 @@ func (g *Game) DebugDraw(screen *ebiten.Image, space *resolv.Space) {
 		for x := 0; x < space.Width(); x++ {
 			cell := space.Cell(x, y)
 
-			cw := float64(space.CellWidth)
-			ch := float64(space.CellHeight)
-			cx := float64(cell.X) * cw
-			cy := float64(cell.Y) * ch
+			cw := float32(space.CellWidth)
+			ch := float32(space.CellHeight)
 
-			drawColor := color.RGBA{20, 20, 20, 255}
+			cx := float32(cell.X) * cw
+			cy := float32(cell.Y) * ch
 
 			if cell.Occupied() {
-				drawColor = color.RGBA{255, 255, 0, 255}
+				drawColor := color.RGBA{R: 255, G: 255, A: 255}
+				vector.StrokeLine(screen, cx, cy, cx+cw, cy, 1, drawColor, false)
+				vector.StrokeLine(screen, cx+cw, cy, cx+cw, cy+ch, 1, drawColor, false)
+				vector.StrokeLine(screen, cx+cw, cy+ch, cx, cy+ch, 1, drawColor, false)
+				vector.StrokeLine(screen, cx, cy, cx, cy+ch, 1, drawColor, false)
 			}
 
-			ebitenutil.DrawLine(screen, cx, cy, cx+cw, cy, drawColor)
-
-			ebitenutil.DrawLine(screen, cx+cw, cy, cx+cw, cy+ch, drawColor)
-
-			ebitenutil.DrawLine(screen, cx+cw, cy+ch, cx, cy+ch, drawColor)
-
-			ebitenutil.DrawLine(screen, cx, cy+ch, cx, cy, drawColor)
 		}
 	}
 }

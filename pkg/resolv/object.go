@@ -40,54 +40,46 @@ func NewObject(x, y, w, h float64, tags ...string) *Object {
 func (obj *Object) Clone() *Object {
 	newObj := NewObject(obj.X, obj.Y, obj.W, obj.H, obj.Tags()...)
 	newObj.Data = obj.Data
+
 	if obj.Shape != nil {
 		newObj.SetShape(obj.Shape.Clone())
 	}
+
 	for k := range obj.ignoreList {
 		newObj.AddToIgnoreList(k)
 	}
+
 	return newObj
 }
 
 // Update updates the object's association to the Cells in the Space. This should be called whenever an Object is moved.
 // This is automatically called once when creating the Object, so you don't have to call it for static objects.
 func (obj *Object) Update() {
-
 	if obj.Space != nil {
 
 		// Object.Space.Remove() sets the removed object's Space to nil, indicating it's been removed. Because we're updating
 		// the Object (which is essentially removing it from its previous Cells / position and re-adding it to the new Cells /
 		// position), we store the original Space to re-set it.
-
 		space := obj.Space
-
 		obj.Space.Remove(obj)
-
 		obj.Space = space
 
 		cx, cy, ex, ey := obj.BoundsToSpace(0, 0)
 
 		for y := cy; y <= ey; y++ {
-
 			for x := cx; x <= ex; x++ {
-
 				c := obj.Space.Cell(x, y)
-
 				if c != nil {
 					c.register(obj)
 					obj.TouchingCells = append(obj.TouchingCells, c)
 				}
-
 			}
-
 		}
-
 	}
 
 	if obj.Shape != nil {
 		obj.Shape.SetPosition(obj.X, obj.Y)
 	}
-
 }
 
 // AddTags adds tags to the Object.
@@ -97,39 +89,27 @@ func (obj *Object) AddTags(tags ...string) {
 
 // RemoveTags removes tags from the Object.
 func (obj *Object) RemoveTags(tags ...string) {
-
 	for _, tag := range tags {
-
 		for i, t := range obj.tags {
-
 			if t == tag {
 				obj.tags = append(obj.tags[:i], obj.tags[i+1:]...)
 				break
 			}
-
 		}
-
 	}
-
 }
 
 // HasTags indicates if an Object has any of the tags indicated.
 func (obj *Object) HasTags(tags ...string) bool {
-
 	for _, tag := range tags {
-
 		for _, t := range obj.tags {
-
 			if t == tag {
 				return true
 			}
-
 		}
-
 	}
 
 	return false
-
 }
 
 // Tags returns the tags an Object has.
@@ -151,6 +131,7 @@ func (obj *Object) SetShape(shape IShape) {
 func (obj *Object) BoundsToSpace(dx, dy float64) (int, int, int, int) {
 	cx, cy := obj.Space.WorldToSpace(obj.X+dx, obj.Y+dy)
 	ex, ey := obj.Space.WorldToSpace(obj.X+obj.W+dx-1, obj.Y+obj.H+dy-1)
+
 	return cx, cy, ex, ey
 }
 
@@ -161,6 +142,7 @@ func (obj *Object) SharesCells(other *Object) bool {
 			return true
 		}
 	}
+
 	return false
 }
 
@@ -171,6 +153,7 @@ func (obj *Object) SharesCellsTags(tags ...string) bool {
 			return true
 		}
 	}
+
 	return false
 }
 
@@ -221,7 +204,6 @@ func (obj *Object) SetBounds(topLeft, bottomRight vector.Vector) {
 // so that it can see if moving it would coincide with a cell that houses another Object (filtered using the given selection of tag strings). If so,
 // Check returns a Collision. If no objects are found or the Object does not exist within a Space, this function returns nil.
 func (obj *Object) Check(dx, dy float64, tags ...string) *Collision {
-
 	if obj.Space == nil {
 		return nil
 	}
@@ -250,36 +232,28 @@ func (obj *Object) Check(dx, dy float64, tags ...string) *Collision {
 	cellsAdded := map[*Cell]bool{}
 
 	for y := cy; y <= ey; y++ {
-
 		for x := cx; x <= ex; x++ {
-
 			if c := obj.Space.Cell(x, y); c != nil {
-
 				for _, o := range c.Objects {
-
 					// We only want cells that have objects other than the checking object, or that aren't on the ignore list.
 					if ignored := obj.ignoreList[o]; o == obj || ignored {
 						continue
 					}
 
 					if _, added := objectsAdded[o]; (len(tags) == 0 || o.HasTags(tags...)) && !added {
-
 						cc.Objects = append(cc.Objects, o)
 						objectsAdded[o] = true
-						if _, added := cellsAdded[c]; !added {
-							cc.Cells = append(cc.Cells, c)
-							cellsAdded[c] = true
+
+						if _, added2 := cellsAdded[c]; added2 {
+							continue
 						}
-						continue
 
+						cc.Cells = append(cc.Cells, c)
+						cellsAdded[c] = true
 					}
-
 				}
-
 			}
-
 		}
-
 	}
 
 	if len(cc.Objects) == 0 {
@@ -304,14 +278,11 @@ func (obj *Object) Check(dx, dy float64, tags ...string) *Collision {
 	ch := cc.checkingObject.Space.CellHeight
 
 	sort.Slice(cc.Cells, func(i, j int) bool {
-
 		return vector.Vector{float64(cc.Cells[i].X*cw + (cw / 2)), float64(cc.Cells[i].Y*ch + (ch / 2))}.Sub(oc).Magnitude() <
 			vector.Vector{float64(cc.Cells[j].X*cw + (cw / 2)), float64(cc.Cells[j].Y*ch + (ch / 2))}.Sub(oc).Magnitude()
-
 	})
 
 	return cc
-
 }
 
 // Overlaps returns if an Object overlaps another Object.

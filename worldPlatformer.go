@@ -1,17 +1,23 @@
 package main
 
 import (
+	"bytes"
+	_ "embed"
 	"fmt"
-	"github.com/justgook/goplatformer/pkg/resolv"
+	"image"
 	"image/color"
+	_ "image/png"
+	"log"
 	"math"
-
-	"github.com/tanema/gween"
-	"github.com/tanema/gween/ease"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/hajimehoshi/ebiten/v2/vector"
+	"github.com/justgook/goplatformer/pkg/aseprite"
+	"github.com/justgook/goplatformer/pkg/ldtk"
+	"github.com/justgook/goplatformer/pkg/resolv"
+	"github.com/tanema/gween"
+	"github.com/tanema/gween/ease"
 )
 
 type Player struct {
@@ -22,6 +28,8 @@ type Player struct {
 	WallSliding    *resolv.Object
 	FacingRight    bool
 	IgnorePlatform *resolv.Object
+	// New Stuff
+	Animation *AnimSprite
 }
 
 func NewPlayer(space *resolv.Space) *Player {
@@ -32,6 +40,7 @@ func NewPlayer(space *resolv.Space) *Player {
 	p.Object.SetShape(resolv.NewRectangle(0, 0, p.Object.W, p.Object.H))
 
 	space.Add(p.Object)
+	p.Animation = initPlayerAnimation()
 
 	return p
 }
@@ -43,6 +52,8 @@ type WorldPlatformer struct {
 
 	FloatingPlatform      *resolv.Object
 	FloatingPlatformTween *gween.Sequence
+
+	TileMapRenderer *EbitenRenderer
 }
 
 func NewWorldPlatformer(game *Game) *WorldPlatformer {
@@ -52,7 +63,128 @@ func NewWorldPlatformer(game *Game) *WorldPlatformer {
 	return w
 }
 
+//go:embed asset/player/Combined.png
+var animationPNG []byte
+
+//go:embed asset/player/Combined.json
+var animationJson []byte
+
+type AnimSprite struct {
+	Animation    string
+	Source       *ebiten.Image
+	Sprite       *ebiten.Image
+	currentFrame int
+	Data         AnimDataMap
+}
+
+type AnimDataMap = map[string][]FFrame
+
+type FFrame struct {
+	Duration int
+	Layers   []FrameDrawData
+}
+type FrameDrawData struct {
+	W  int
+	H  int
+	tX int
+	tY int
+	X0 int
+	Y0 int
+	X1 int
+	Y1 int
+}
+
+// TODO Move this to build step and us gob file for that
+// setup aseprite to:
+// Item Filenam `{layer} {frame}`
+// Item Tagname `{tag}`
+func convertAsprite2My(input *aseprite.Animation) map[string][]FFrame {
+	output := make(AnimDataMap, len(input.Meta.FrameTags))
+	layerCount := len(input.Meta.Layers)
+	frameMaps := input.Frames
+	for _, anim := range input.Meta.FrameTags {
+		output[anim.Name] = make([]FFrame, 0, anim.To-anim.From+1)
+		for i := anim.From; i <= anim.To; i++ {
+			item := FFrame{Layers: make([]FrameDrawData, 0, layerCount)}
+			for _, layer := range input.Meta.Layers {
+				key := fmt.Sprintf("%s %d", layer.Name, i)
+				data := FrameDrawData{
+					W:  frameMaps[key].Frame.W,
+					H:  frameMaps[key].Frame.H,
+					X0: frameMaps[key].Frame.X,
+					Y0: frameMaps[key].Frame.Y,
+					X1: frameMaps[key].Frame.X + frameMaps[key].Frame.W,
+					Y1: frameMaps[key].Frame.Y + frameMaps[key].Frame.H,
+					tX: frameMaps[key].SpriteSourceSize.X,
+					tY: frameMaps[key].SpriteSourceSize.Y,
+				}
+				item.Duration = int(frameMaps[key].Duration)
+				item.Layers = append(item.Layers, data)
+			}
+			output[anim.Name] = append(output[anim.Name], item)
+		}
+	}
+
+	return output
+}
+
+func initPlayerAnimation() *AnimSprite {
+	playerAnim, err := aseprite.UnmarshalAnimation(animationJson)
+	if err != nil {
+		panic(err)
+	}
+	// Decode an image from the image file's byte slice.
+	img, _, err := image.Decode(bytes.NewReader(animationPNG))
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return &AnimSprite{
+		Animation: "Run",
+		Source:    ebiten.NewImageFromImage(img),
+		//TODO Update to rel size
+		Sprite: ebiten.NewImage(48, 48),
+		Data:   convertAsprite2My(&playerAnim),
+	}
+}
+
+func (a *AnimSprite) Update() {
+	animationFrame := (a.currentFrame / 5) % (len(a.Data[a.Animation]))
+	currentFrameData := a.Data[a.Animation][animationFrame]
+	a.Sprite.Fill(color.RGBA{})
+	for _, info := range currentFrameData.Layers {
+		rect := image.Rect(info.X0, info.Y0, info.X1, info.Y1)
+		result := a.Source.SubImage(rect).(*ebiten.Image)
+		op := &ebiten.DrawImageOptions{}
+		op.GeoM.Translate(float64(info.tX), float64(info.tY))
+		a.Sprite.DrawImage(result, op)
+	}
+	a.currentFrame++
+}
+
+//go:embed asset/example.ldtk
+var exampleLevel []byte
+
+func (world *WorldPlatformer) initLevel() {
+	ldtkProject, err := ldtk.Read(exampleLevel)
+	if err != nil {
+		panic(err)
+	}
+
+	// Choose a level...
+	level := ldtkProject.Levels[0]
+
+	// Create a new renderer...
+	// EbitenRenderer.DiskLoader loads images from disk using ebitenutil.NewImageFromFile() and takes an argument of the base path to use when loading.
+	// We pass a blank string to NewDiskLoader() because for the example, the assets are in the same directory.
+	world.TileMapRenderer = NewEbitenRenderer(NewDiskLoader("asset"))
+
+	// ... And render the tiles for the level out to layers, which will be *ebiten.Images. We'll retrieve them to draw in a Draw() loop later.
+	world.TileMapRenderer.Render(level)
+}
+
 func (world *WorldPlatformer) Init() {
+	world.initLevel()
 	// Initialize the world.
 	gw := float64(world.Game.Width)
 	gh := float64(world.Game.Height)
@@ -62,8 +194,9 @@ func (world *WorldPlatformer) Init() {
 	// detection.
 	world.Space = resolv.NewSpace(int(gw), int(gh), 16, 16)
 
-	// Construct the solid level geometry. Note that the simple approach of checking cells in a Space for collision works simply when the geometry is aligned with the cells,
-	// as it all is in this platformer example.
+	// Construct the solid level geometry.
+	// Note that the simple approach of checking cells in a Space for collision works simply when the geometry is
+	// aligned with the cells, as it all is in this platformer example.
 	world.Space.Add(
 		resolv.NewObject(0, 0, 16, gh, "solid"),
 		resolv.NewObject(gw-16, 0, 16, gh, "solid"),
@@ -114,9 +247,9 @@ func (world *WorldPlatformer) Init() {
 		ramp.W, ramp.H,
 		0, ramp.H,
 	)
+
 	world.Space.Add(ramp)
 	ramp.SetShape(rampShape)
-
 }
 
 func (world *WorldPlatformer) Update() {
@@ -144,7 +277,7 @@ func (world *WorldPlatformer) Update() {
 		player.SpeedY = 1
 	}
 
-	// Horizontal movement is only possible when not wallsliding.
+	// Horizontal movement is only possible when not wall sliding.
 	if player.WallSliding == nil {
 		if ebiten.IsKeyPressed(ebiten.KeyRight) || ebiten.GamepadAxisValue(0, 0) > 0.1 {
 			player.SpeedX += accel
@@ -181,7 +314,7 @@ func (world *WorldPlatformer) Update() {
 			if player.OnGround != nil {
 				player.SpeedY = -jumpSpd
 			} else if player.WallSliding != nil {
-				// WALLJUMPING
+				// WALL JUMPING
 				player.SpeedY = -jumpSpd
 
 				if player.WallSliding.X > player.Object.X {
@@ -197,7 +330,7 @@ func (world *WorldPlatformer) Update() {
 
 	// We handle horizontal movement separately from vertical movement. This is, conceptually, decomposing movement into two phases / axes.
 	// By decomposing movement in this manner, we can handle each case properly (i.e. stop movement horizontally separately from vertical movement, as
-	// necesseary). More can be seen on this topic over on this blog post on higherorderfun.com:
+	// necessary). More can be seen on this topic over on this blog post on:
 	// http://higherorderfun.com/blog/2012/05/20/the-guide-to-implementing-2d-platformers/
 
 	// dx is the horizontal delta movement variable (which is the Player's horizontal speed). If we come into contact with something, then it will
@@ -375,53 +508,109 @@ func (world *WorldPlatformer) Update() {
 	}
 
 	player.Object.Update() // Update the player's position in the space.
+	/****************************************************************************************/
+	/****************************player animation************************************************************/
+	if player.WallSliding != nil {
+		player.Animation.Animation = "wSlideLow"
+	} else if player.OnGround == nil {
+		if player.SpeedY > 2 {
+			player.Animation.Animation = "Fall"
+		} else if player.SpeedY < -2 {
+			player.Animation.Animation = "JumpUp"
+		} else {
+			player.Animation.Animation = "JumpMax"
+		}
+	} else if player.SpeedX != 0 {
+		player.Animation.Animation = "Run"
+	} else {
+		player.Animation.Animation = "Idle"
 
+	}
+	player.Animation.Update() // Update player animation frame
+
+	/****************************************************************************************/
 	// And that's it!
-
 }
 
 func (world *WorldPlatformer) Draw(screen *ebiten.Image) {
-	for _, o := range world.Space.Objects() {
+	screen.Fill(color.RGBA{G: 145, B: 255, A: 255})
 
-		if o.HasTags("platform") && o != world.FloatingPlatform {
-			drawColor := color.RGBA{180, 100, 0, 255}
-			vector.DrawFilledRect(screen, float32(o.X), float32(o.Y), float32(o.W), float32(o.H), drawColor, false)
-		} else if o.HasTags("ramp") {
-			drawColor := color.RGBA{255, 50, 100, 255}
+	/*LDtk Starts */
+	/* ==================================================================== */
+	for _, layer := range world.TileMapRenderer.RenderedLayers {
+		if layer.Layer.Identifier == "Indoor" {
+			screen.DrawImage(layer.Image, &ebiten.DrawImageOptions{})
+		}
+	}
+	/* ==================================================================== */
+	/*LDtk Starts */
+
+	drawColor := color.RGBA{R: 255, G: 50, B: 100, A: 255}
+	for _, o := range world.Space.Objects() {
+		if o.HasTags("ramp") {
 			tri := o.Shape.(*resolv.ConvexPolygon)
 			world.DrawPolygon(screen, tri, drawColor)
-		} else {
-			drawColor := color.RGBA{60, 60, 60, 255}
-			vector.DrawFilledRect(screen, float32(o.X), float32(o.Y), float32(o.W), float32(o.H), drawColor, false)
 		}
-
+		//if o.HasTags("platform") && o != world.FloatingPlatform {
+		//	drawColor := color.RGBA{R: 180, G: 100, A: 255}
+		//	vector.DrawFilledRect(screen, float32(o.X), float32(o.Y), float32(o.W), float32(o.H), drawColor, false)
+		//} else if o.HasTags("ramp") {
+		//	drawColor := color.RGBA{R: 255, G: 50, B: 100, A: 255}
+		//	tri := o.Shape.(*resolv.ConvexPolygon)
+		//	world.DrawPolygon(screen, tri, drawColor)
+		//} else {
+		//	drawColor := color.RGBA{R: 60, G: 60, B: 60, A: 255}
+		//	vector.DrawFilledRect(screen, float32(o.X), float32(o.Y), float32(o.W), float32(o.H), drawColor, false)
+		//}
 	}
 
 	// We draw the floating platform separately because Space.Objects() returns Objects in order of which cells they are in, which means
 	// that the platform would draw under the solid blocks if it's below it. This way, it always draws on top.
 	o := world.FloatingPlatform
-	drawColor := color.RGBA{180, 100, 0, 255}
+	drawColor = color.RGBA{R: 180, G: 100, A: 255}
 	vector.DrawFilledRect(screen, float32(o.X), float32(o.Y), float32(o.W), float32(o.H), drawColor, false)
 
 	player := world.Player.Object
-	playerColor := color.RGBA{0, 255, 60, 255}
+	playerColor := color.RGBA{G: 255, B: 60, A: 255}
 	if world.Player.OnGround == nil {
 		// We draw the player as a different color when jumping so we can visually see when he's in the air.
-		playerColor = color.RGBA{200, 0, 200, 255}
+		playerColor = color.RGBA{R: 200, B: 200, A: 255}
 	}
-	vector.DrawFilledRect(screen, float32(player.X), float32(player.Y), float32(player.W), float32(player.H), playerColor, false)
+	_ = playerColor
+	// vector.DrawFilledRect(screen, float32(player.X), float32(player.Y), float32(player.W), float32(player.H), playerColor, false)
+
+	/* ===================================================== */
+	/* Player Sprite*/
+	op := &ebiten.DrawImageOptions{}
+	if !world.Player.FacingRight {
+		op.GeoM.Scale(-1, 1)
+		op.GeoM.Translate(48, 0)
+	}
+	op.GeoM.Translate(float64(player.X)-16, float64(player.Y)-16)
+	screen.DrawImage(world.Player.Animation.Sprite, op)
+	/* ===================================================== */
 
 	if world.Game.Debug {
 		world.Game.DebugDraw(screen, world.Space)
 	}
+
+	/*LDtk Starts */
+	/* ==================================================================== */
+	for _, layer := range world.TileMapRenderer.RenderedLayers {
+		if layer.Layer.Identifier != "Indoor" {
+			screen.DrawImage(layer.Image, &ebiten.DrawImageOptions{})
+		}
+	}
+	/* ==================================================================== */
+	/*LDtk Starts */
 
 	if world.Game.ShowHelpText {
 		world.Game.DrawText(screen, 16, 16,
 			"~ Platformer Demo ~",
 			"Move Player: Left, Right Arrow",
 			"Jump: X Key",
-			"Wallslide: Move into wall in air",
-			"Walljump: Jump while wallsliding",
+			"Wall-slide: Move into wall in air",
+			"Wall-jump: Jump while wall sliding",
 			"Fall through platforms: Down + X",
 			"",
 			"F1: Toggle Debug View",
@@ -434,7 +623,6 @@ func (world *WorldPlatformer) Draw(screen *ebiten.Image) {
 			fmt.Sprintf("%d TPS (ticks per second)", int(ebiten.ActualTPS())),
 		)
 	}
-
 }
 
 func (world *WorldPlatformer) DrawPolygon(screen *ebiten.Image, polygon *resolv.ConvexPolygon, color color.Color) {

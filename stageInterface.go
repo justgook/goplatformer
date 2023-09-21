@@ -2,7 +2,7 @@ package main
 
 import "github.com/hajimehoshi/ebiten/v2"
 
-type WorldInterface interface {
+type StageInterface interface {
 	Init()
 	Update()
 	Draw(*ebiten.Image)

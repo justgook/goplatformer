@@ -24,7 +24,6 @@ func NewWorldShapeTest(game *Game) *WorldShapeTest {
 }
 
 func (world *WorldShapeTest) Init() {
-
 	world.Solid = resolv.NewConvexPolygon(
 		100, 100,
 		250, 80,
@@ -33,9 +32,9 @@ func (world *WorldShapeTest) Init() {
 		150, 300,
 		80, 150,
 	)
+
 	world.CircleOne = resolv.NewCircle(500, 200, 32)
 	world.CircleTwo = resolv.NewCircle(400, 250, 32)
-
 }
 
 func (world *WorldShapeTest) Update() {

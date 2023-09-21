@@ -21,16 +21,13 @@ func NewCollision() *Collision {
 
 // HasTags returns whether any objects within the Collision have all of the specified tags. This slice does not contain the Object that called Check().
 func (cc *Collision) HasTags(tags ...string) bool {
-
 	for _, o := range cc.Objects {
-
 		if o == cc.checkingObject {
 			continue
 		}
 		if o.HasTags(tags...) {
 			return true
 		}
-
 	}
 
 	return false
@@ -39,29 +36,22 @@ func (cc *Collision) HasTags(tags ...string) bool {
 // ObjectsByTags returns a slice of Objects from the cells reported by a Collision object by searching for Objects with a specific set of tags.
 // This slice does not contain the Object that called Check().
 func (cc *Collision) ObjectsByTags(tags ...string) []*Object {
-
-	objects := []*Object{}
-
+	var objects []*Object
 	for _, o := range cc.Objects {
-
 		if o == cc.checkingObject {
 			continue
 		}
 		if o.HasTags(tags...) {
 			objects = append(objects, o)
 		}
-
 	}
 
 	return objects
-
 }
 
 // ContactWithObject returns the delta to move to come into contact with the specified Object.
 func (cc *Collision) ContactWithObject(object *Object) vector.Vector {
-
 	delta := vector.Vector{0, 0}
-
 	if cc.dx < 0 {
 		delta[0] = object.X + object.W - cc.checkingObject.X
 	} else if cc.dx > 0 {
@@ -80,9 +70,7 @@ func (cc *Collision) ContactWithObject(object *Object) vector.Vector {
 
 // ContactWithCell returns the delta to move to come into contact with the specified Cell.
 func (cc *Collision) ContactWithCell(cell *Cell) vector.Vector {
-
 	delta := vector.Vector{0, 0}
-
 	cx := float64(cell.X * cc.checkingObject.Space.CellWidth)
 	cy := float64(cell.Y * cc.checkingObject.Space.CellHeight)
 
@@ -99,16 +87,13 @@ func (cc *Collision) ContactWithCell(cell *Cell) vector.Vector {
 	}
 
 	return delta
-
 }
 
 // SlideAgainstCell returns how much distance the calling Object can slide to avoid a collision with the targetObject. This only works on vertical and horizontal axes (x and y directly),
 // primarily for platformers / top-down games. avoidTags is a sequence of tags (as strings) to indicate when sliding is valid (i.e. if a Cell contains an Object that has the tag given in
 // the avoidTags slice, then sliding CANNOT happen). If sliding is not able to be done for whatever reason, SlideAgainstCell returns nil.
 func (cc *Collision) SlideAgainstCell(cell *Cell, avoidTags ...string) vector.Vector {
-
 	sp := cc.checkingObject.Space
-
 	collidingCell := cc.Cells[0]
 	ccX, ccY := sp.SpaceToWorld(collidingCell.X, collidingCell.Y)
 	hX := float64(sp.CellWidth) / 2.0
@@ -131,7 +116,6 @@ func (cc *Collision) SlideAgainstCell(cell *Cell, avoidTags ...string) vector.Ve
 
 	// Moving vertically
 	if cc.dy != 0 {
-
 		if diffX > 0 && (right == nil || !right.ContainsTags(avoidTags...)) {
 			// Slide right
 			slide[0] = ccX + hX - cc.checkingObject.X
@@ -156,5 +140,4 @@ func (cc *Collision) SlideAgainstCell(cell *Cell, avoidTags ...string) vector.Ve
 	}
 
 	return slide
-
 }
