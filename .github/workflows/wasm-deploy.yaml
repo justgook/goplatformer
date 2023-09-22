@@ -24,7 +24,7 @@ jobs:
           go-version-file: "go.mod"
           cache-dependency-path: "**/*.sum"
       - name: Build Github Pages
-        run: make wasm
+        run: make web
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v2.0.0
         with:
