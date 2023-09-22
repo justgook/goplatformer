@@ -4,6 +4,7 @@ import (
 	"bytes"
 	_ "embed"
 	"fmt"
+	"github.com/justgook/goplatformer"
 	"image"
 	"image/color"
 	_ "image/png"
@@ -63,12 +64,6 @@ func NewWorldPlatformer(game *Game) *WorldPlatformer {
 	return w
 }
 
-//go:embed asset/player/Combined.png
-var animationPNG []byte
-
-//go:embed asset/player/Combined.json
-var animationJson []byte
-
 type AnimSprite struct {
 	Animation    string
 	Source       *ebiten.Image
@@ -96,8 +91,8 @@ type FrameDrawData struct {
 
 // TODO Move this to build step and us gob file for that
 // setup aseprite to:
-// Item Filenam `{layer} {frame}`
-// Item Tagname `{tag}`
+// Item File name `{layer} {frame}`
+// Item Tag Name `{tag}`
 func convertAsprite2My(input *aseprite.Animation) map[string][]FFrame {
 	output := make(AnimDataMap, len(input.Meta.FrameTags))
 	layerCount := len(input.Meta.Layers)
@@ -129,12 +124,12 @@ func convertAsprite2My(input *aseprite.Animation) map[string][]FFrame {
 }
 
 func initPlayerAnimation() *AnimSprite {
-	playerAnim, err := aseprite.UnmarshalAnimation(animationJson)
+	playerAnim, err := aseprite.UnmarshalAnimation(goplatformer.AnimationJson)
 	if err != nil {
 		panic(err)
 	}
 	// Decode an image from the image file's byte slice.
-	img, _, err := image.Decode(bytes.NewReader(animationPNG))
+	img, _, err := image.Decode(bytes.NewReader(goplatformer.AnimationPNG))
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -166,18 +161,12 @@ type embededImageLoader struct {
 	tilesets map[string]*ebiten.Image
 }
 
-//go:embed asset/tileset.png
-var tilesetPng1 []byte
-
-//go:embed asset/tileset2.png
-var tilesetPng2 []byte
-
 func NewTilesetLoader() *embededImageLoader {
-	img1, _, err := image.Decode(bytes.NewReader(tilesetPng1))
+	img1, _, err := image.Decode(bytes.NewReader(goplatformer.TilesetPng1))
 	if err != nil {
 		log.Fatal(err)
 	}
-	img2, _, err := image.Decode(bytes.NewReader(tilesetPng2))
+	img2, _, err := image.Decode(bytes.NewReader(goplatformer.TilesetPng2))
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -194,11 +183,8 @@ func (d *embededImageLoader) LoadTileset(tilesetPath string) *ebiten.Image {
 	return d.tilesets[tilesetPath]
 }
 
-//go:embed asset/example.ldtk
-var exampleLevel []byte
-
 func (world *WorldPlatformer) initLevel() {
-	ldtkProject, err := ldtk.Read(exampleLevel)
+	ldtkProject, err := ldtk.Read(goplatformer.ExampleLevel)
 	if err != nil {
 		panic(err)
 	}

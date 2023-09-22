@@ -15,12 +15,10 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/hajimehoshi/ebiten/v2/text"
 	"github.com/hajimehoshi/ebiten/v2/vector"
+	"github.com/justgook/goplatformer"
 	"github.com/justgook/goplatformer/pkg/resolv"
 	"golang.org/x/image/font"
 )
-
-//go:embed excel.ttf
-var excelFont []byte
 
 type Game struct {
 	Worlds        []StageInterface
@@ -51,7 +49,7 @@ func NewGame() *Game {
 		NewWorldDirectTest(g),
 	}
 
-	fontData, _ := truetype.Parse(excelFont)
+	fontData, _ := truetype.Parse(goplatformer.ExcelFont)
 	g.FontFace = truetype.NewFace(fontData, &truetype.Options{Size: 10})
 
 	// Debug FPS rendering
