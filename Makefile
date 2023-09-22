@@ -37,6 +37,11 @@ all: wasm
 wasm: $(BUILD_DIR)/game.wasm $(BUILD_DIR)/index.html $(BUILD_DIR)/wasm_exec.js
 .PHONY: wasm
 
+update:
+	$(Q)go get -u ./...
+	$(Q)go mod tidy
+.PHONY: update
+
 $(BUILD_DIR)/game.wasm: export GOOS=js
 $(BUILD_DIR)/game.wasm: export GOARCH=wasm
 $(BUILD_DIR)/game.wasm:
@@ -70,4 +75,3 @@ $(BUILD_DIR)/index.html: export INDEX_HTML_CONTENT:=$(INDEX_HTML_CONTENT)
 $(BUILD_DIR)/index.html:
 	$(Q)$(MKDIR_P) $(dir $@)
 	$(Q)echo "$${INDEX_HTML_CONTENT}" > $@
-
