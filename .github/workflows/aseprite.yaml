@@ -1,0 +1,40 @@
+name: aseprite
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - .github/workflows/aseprite.yaml
+env:
+  BUILD_TYPE: RelWithDebInfo
+  ENABLE_UI: off
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        repository: 'https://github.com/aseprite/aseprite.git'
+        submodules: 'recursive'
+    # - uses: turtlesec-no/get-ninja@main
+    - name: Install Dependencies
+      shell: bash
+      run: |
+        sudo apt-get update -qq
+        sudo apt-get install -y \
+          libx11-dev libxcursor-dev libxi-dev \
+          ninja
+    - name: Generating Makefiles
+      shell: bash
+      run: |
+        export enable_ccache=on
+        cmake -S . -B build -G Ninja \
+          -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
+          -DCMAKE_OSX_DEPLOYMENT_TARGET=10.9 \
+          -DENABLE_TESTS=ON \
+          -DENABLE_UI=${{ env.ENABLE_UI }} \
+          -DENABLE_CCACHE=$enable_ccache
+    - name: Compiling
+      shell: bash
+      run: |
+        cd build && ninja
+

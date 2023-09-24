@@ -4,21 +4,20 @@ import (
 	"bytes"
 	_ "embed"
 	"fmt"
-	"github.com/justgook/goplatformer"
-	"image"
-	"image/color"
-	_ "image/png"
-	"log"
-	"math"
-
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/hajimehoshi/ebiten/v2/vector"
+	"github.com/justgook/goplatformer"
 	"github.com/justgook/goplatformer/pkg/aseprite"
 	"github.com/justgook/goplatformer/pkg/ldtk"
 	"github.com/justgook/goplatformer/pkg/resolv"
 	"github.com/tanema/gween"
 	"github.com/tanema/gween/ease"
+	"image"
+	"image/color"
+	_ "image/png"
+	"log/slog"
+	"math"
 )
 
 type Player struct {
@@ -131,9 +130,9 @@ func initPlayerAnimation() *AnimSprite {
 	// Decode an image from the image file's byte slice.
 	img, _, err := image.Decode(bytes.NewReader(goplatformer.AnimationPNG))
 	if err != nil {
-		log.Fatal(err)
+		slog.Error("image.Decode", err)
+		panic("initPlayerAnimation")
 	}
-
 	return &AnimSprite{
 		Animation: "Run",
 		Source:    ebiten.NewImageFromImage(img),
@@ -157,20 +156,22 @@ func (a *AnimSprite) Update() {
 	a.currentFrame++
 }
 
-type embededImageLoader struct {
+type EmbeddedImageLoader struct {
 	tilesets map[string]*ebiten.Image
 }
 
-func NewTilesetLoader() *embededImageLoader {
+func NewTilesetLoader() *EmbeddedImageLoader {
 	img1, _, err := image.Decode(bytes.NewReader(goplatformer.TilesetPng1))
 	if err != nil {
-		log.Fatal(err)
+		slog.Error("image.Decode", err)
+		panic("NewTilesetLoader")
 	}
 	img2, _, err := image.Decode(bytes.NewReader(goplatformer.TilesetPng2))
 	if err != nil {
-		log.Fatal(err)
+		slog.Error("image.Decode", err)
+		panic("NewTilesetLoader")
 	}
-	return &embededImageLoader{
+	return &EmbeddedImageLoader{
 		tilesets: map[string]*ebiten.Image{
 			"tileset.png":  ebiten.NewImageFromImage(img1),
 			"tileset2.png": ebiten.NewImageFromImage(img2),
@@ -179,7 +180,7 @@ func NewTilesetLoader() *embededImageLoader {
 
 }
 
-func (d *embededImageLoader) LoadTileset(tilesetPath string) *ebiten.Image {
+func (d *EmbeddedImageLoader) LoadTileset(tilesetPath string) *ebiten.Image {
 	return d.tilesets[tilesetPath]
 }
 

@@ -3,6 +3,8 @@ name: wasm-build-deploy
 on:
   workflow_dispatch:
   push:
+    paths-ignore:
+      - .github/workflows/aseprite.yaml
     branches:
       - release
     tags:
