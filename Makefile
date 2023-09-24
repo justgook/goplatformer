@@ -44,7 +44,8 @@ RESOURCES := $(subst $(ASSET_DIR),$(BUILD_DIR),$(RESOURCES))
 
 APP_DIR := ./cmd/game
 
-
+SYS_GOOS := $(shell go env GOOS)
+SYS_GOARCH := $(shell go env GOARCH)
 LDFLAGS := -s -w
 
 clean:
@@ -62,7 +63,6 @@ release-win64: $(BIN_WIN64_DIR)/game.exe
 	$(Q)echo use tools to add icons / versions
 	$(Q)echo https://github.com/tc-hib/go-winres
 	$(Q)echo https://github.com/josephspurrier/goversioninfo
-
 .PHONY: release-win64
 
 release-mac-intel: $(BUILD_DIR)/MyGameX86.app
@@ -71,7 +71,9 @@ release-mac-intel: $(BUILD_DIR)/MyGameX86.app
 release-mac-arm: $(BUILD_DIR)/MyGameM1.app
 .PHONY: release-mac-arm
 
-APPIFY := go run github.com/justgook/goplatformer/cmd/appify
+
+
+APPIFY := GOOS=$(SYS_GOOS) GOARCH=$(SYS_GOARCH) go run github.com/justgook/goplatformer/cmd/appify
 
 $(BUILD_DIR)/MyGameM1.app: $(BIN_MACAARC64_DIR)/game
 	$(Q)$(APPIFY) -name "My Super Game" -icon ./asset/bundle/icon.png -o $@ $<
@@ -88,6 +90,7 @@ update:
 	$(Q)go get -u ./...
 	$(Q)go mod tidy
 .PHONY: update
+
 
 
 $(BIN_WIN64_DIR)/game.exe: export GOOS=windows
@@ -159,10 +162,22 @@ endif
 
 resources: $(RESOURCES)
 
+$(BUILD_DIR)/%.level: export GOOS=$(SYS_GOOS)
+$(BUILD_DIR)/%.level: export GOARCH=$(SYS_GOARCH)
 $(BUILD_DIR)/%.level: $(ASSET_DIR)/%.ldtk
 	$(Q)echo ... building $@ from $<
 	$(Q)$(MKDIR_P) $(dir $@)
 	$(Q)go run ./cmd/level -o $@ $<
+
+$(BUILD_DIR)/%.sprite: export GOOS=$(SYS_GOOS)
+$(BUILD_DIR)/%.sprite: export GOARCH=$(SYS_GOARCH)
+$(BUILD_DIR)/%.sprite: $(BUILD_DIR)/%.png $(BUILD_DIR)/%.json
+	$(Q)echo ... building $@ from $<
+	$(Q)$(MKDIR_P) $(dir $@)
+	$(Q)go run ./cmd/sprite \
+		-o $@ \
+		--data $(BUILD_DIR)/$*.json \
+		--sprite $(BUILD_DIR)/$*.png
 
 $(BUILD_DIR)/%.png $(BUILD_DIR)/%.json &: $(ASSET_DIR)/%.aseprite $(ASEPRITE)
 	$(Q)echo ... building $@ from $<
@@ -185,13 +200,6 @@ $(BUILD_DIR)/%.png $(BUILD_DIR)/%.json &: $(ASSET_DIR)/%.aseprite $(ASEPRITE)
 		--list-tags \
 		$<
 
-$(BUILD_DIR)/%.sprite: $(BUILD_DIR)/%.png $(BUILD_DIR)/%.json
-	$(Q)echo ... building $@ from $<
-	$(Q)$(MKDIR_P) $(dir $@)
-	$(Q)go run ./cmd/sprite \
-		-o $@ \
-		--data $(BUILD_DIR)/$*.json \
-		--sprite $(BUILD_DIR)/$*.png
 
 # Loacal build of aseprite CLI tool
 aseprite/aseprite: tmp/aseprite/build/bin/aseprite tmp/aseprite/build/bin/data
