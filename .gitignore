@@ -19,6 +19,7 @@
 go.work
 
 # Build artifacts and tools
+/tmp/
 /aseprite/
 /build/
 /build.nosync/

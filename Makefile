@@ -80,7 +80,7 @@ $(BUILD_DIR)/MyGameX86.app: $(BIN_MAC64_DIR)/game
 	$(Q)$(APPIFY) -name "My Super Game" -icon ./asset/bundle/icon.png -o $@ $<
 
 
-run: #$(RESOURCES)
+run: $(RESOURCES)
 	$(Q)go run $(APP_DIR)
 .PHONY: run
 
@@ -108,7 +108,7 @@ $(BIN_MACAARC64_DIR)/game: $(RESOURCES)
 
 $(WEB_DIR)/game.wasm: export GOOS=js
 $(WEB_DIR)/game.wasm: export GOARCH=wasm
-$(WEB_DIR)/game.wasm: #$(RESOURCES)
+$(WEB_DIR)/game.wasm: $(RESOURCES)
 	$(Q)$(MKDIR_P) $(dir $@)
 	$(Q)go build -ldflags="$(LDFLAGS)" -o $@ $(APP_DIR)
 
@@ -149,22 +149,23 @@ $(WEB_DIR)/index.html:
 
 
 ASEPRITE = /Applications/Aseprite.app/Contents/MacOS/aseprite
-# ifneq ("$(wildcard $(ASEPRITE))","")
+ifeq ("$(wildcard $(ASEPRITE))","")
+	ASEPRITE=aseprite/aseprite
 #
 # else
 # 	# ASEPRITE="C:\Program Files\Aseprite\aseprite.exe"
 # 	$(error please install Aseprite)
-# endif
+endif
 
 resources: $(RESOURCES)
 
 $(BUILD_DIR)/%.level: $(ASSET_DIR)/%.ldtk
-	$(Q)echo building $@ from $<
+	$(Q)echo ... building $@ from $<
 	$(Q)$(MKDIR_P) $(dir $@)
 	$(Q)go run ./cmd/level -o $@ $<
 
-$(BUILD_DIR)/%.png $(BUILD_DIR)/%.json &: $(ASSET_DIR)/%.aseprite
-	$(Q)echo building $@ from $<
+$(BUILD_DIR)/%.png $(BUILD_DIR)/%.json &: $(ASSET_DIR)/%.aseprite $(ASEPRITE)
+	$(Q)echo ... building $@ from $<
 	$(Q)$(MKDIR_P) $(dir $@)
 	$(ASEPRITE) -b \
 		--data $(BUILD_DIR)/$*.json \
@@ -185,10 +186,31 @@ $(BUILD_DIR)/%.png $(BUILD_DIR)/%.json &: $(ASSET_DIR)/%.aseprite
 		$<
 
 $(BUILD_DIR)/%.sprite: $(BUILD_DIR)/%.png $(BUILD_DIR)/%.json
-	$(Q)echo building $@ from $<
+	$(Q)echo ... building $@ from $<
 	$(Q)$(MKDIR_P) $(dir $@)
 	$(Q)go run ./cmd/sprite \
 		-o $@ \
 		--data $(BUILD_DIR)/$*.json \
 		--sprite $(BUILD_DIR)/$*.png
+
+# Loacal build of aseprite CLI tool
+aseprite/aseprite: tmp/aseprite/build/bin/aseprite tmp/aseprite/build/bin/data
+	$(Q)$(MKDIR_P) $(dir $@)
+	$(Q)cp -R $^ $(dir $@)
+
+tmp/aseprite/build/bin/aseprite tmp/aseprite/build/bin/data &: tmp/aseprite/build
+	$(Q)cd $< && ninja
+
+tmp/aseprite/build: tmp/aseprite
+	$(Q)cd $< && cmake -S . -B build -G Ninja \
+		-DCMAKE_BUILD_TYPE=Release \
+		-DCMAKE_OSX_DEPLOYMENT_TARGET=10.9 \
+		-DENABLE_TESTS=off \
+		-DENABLE_UI=off \
+		-DENABLE_CCACHE=off \
+		-DPNG_ARM_NEON=off
+
+tmp/aseprite:
+	$(Q)$(MKDIR_P) $(dir $@)
+	$(Q)git clone --recursive https://github.com/aseprite/aseprite.git $@
 
