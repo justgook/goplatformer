@@ -18,7 +18,8 @@
 # Go workspace file
 go.work
 
-# Build artifacts
+# Build artifacts and tools
+/aseprite/
 /build/
 /build.nosync/
 *.wasm
