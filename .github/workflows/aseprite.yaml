@@ -15,14 +15,13 @@ jobs:
       with:
         repository: 'aseprite/aseprite'
         submodules: 'recursive'
-    # - uses: turtlesec-no/get-ninja@main
+    - uses: turtlesec-no/get-ninja@main
     - name: Install Dependencies
       shell: bash
       run: |
         sudo apt-get update -qq
         sudo apt-get install -y \
-          libx11-dev libxcursor-dev libxi-dev \
-          ninja
+          libx11-dev libxcursor-dev libxi-dev
     - name: Generating Makefiles
       shell: bash
       run: |
