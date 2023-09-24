@@ -33,7 +33,7 @@ jobs:
         key: ${{ runner.os }}-aseprite
 
     - name: Fail Job if no cache found
-      if: steps.cache-primes.outputs.cache-hit != 'true'
+      if: steps.cache-aseprite.outputs.cache-hit != 'true'
       run: exit 1
 
     - name: Build Github Pages
