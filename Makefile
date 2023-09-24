@@ -200,25 +200,18 @@ $(BUILD_DIR)/%.png $(BUILD_DIR)/%.json &: $(ASSET_DIR)/%.aseprite $(ASEPRITE)
 		--list-tags \
 		$<
 
-
-# Loacal build of aseprite CLI tool
-aseprite/aseprite: tmp/aseprite/build/bin/aseprite tmp/aseprite/build/bin/data
-	$(Q)$(MKDIR_P) $(dir $@)
-	$(Q)cp -R $^ $(dir $@)
-
-tmp/aseprite/build/bin/aseprite tmp/aseprite/build/bin/data &: tmp/aseprite/build
-	$(Q)cd $< && ninja
-
-tmp/aseprite/build: tmp/aseprite
-	$(Q)cd $< && cmake -S . -B build -G Ninja \
+aseprite/aseprite:
+	$(Q)$(eval TMP := $(shell mktemp -d))
+	$(Q)git clone --recursive https://github.com/aseprite/aseprite.git $(TMP)/aseprite
+	$(Q)cd $(TMP)/aseprite && cmake -S . -B build -G Ninja \
 		-DCMAKE_BUILD_TYPE=Release \
 		-DCMAKE_OSX_DEPLOYMENT_TARGET=10.9 \
 		-DENABLE_TESTS=off \
 		-DENABLE_UI=off \
 		-DENABLE_CCACHE=off \
 		-DPNG_ARM_NEON=off
-
-tmp/aseprite:
-	$(Q)$(MKDIR_P) $(dir $@)
-	$(Q)git clone --recursive https://github.com/aseprite/aseprite.git $@
+	$(Q)cd $(TMP)/aseprite/build && ninja
+	$(Q)$(MKDIR_P) $(CURDIR)/aseprite
+	$(Q)cp -R $(TMP)/aseprite/build/bin/aseprite $(TMP)/aseprite/build/bin/data "$(CURDIR)/aseprite/"
+	$(Q)rm -rf $(TMP)
 

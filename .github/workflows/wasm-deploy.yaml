@@ -32,9 +32,15 @@ jobs:
         path: aseprite
         key: ${{ runner.os }}-aseprite
 
-    - name: Fail Job if no cache found
+    - uses: turtlesec-no/get-ninja@main
       if: steps.cache-aseprite.outputs.cache-hit != 'true'
-      run: exit 1
+    - name: Install Dependencies
+      if: steps.cache-aseprite.outputs.cache-hit != 'true'
+      shell: bash
+      run: |
+        sudo apt-get update -qq
+        sudo apt-get install -y \
+          libx11-dev libxcursor-dev libxi-dev
 
     - name: Build Github Pages
       run: make web
