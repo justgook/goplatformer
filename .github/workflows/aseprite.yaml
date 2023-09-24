@@ -13,7 +13,7 @@ jobs:
     steps:
     - uses: actions/checkout@v4
       with:
-        repository: 'https://github.com/aseprite/aseprite.git'
+        repository: 'aseprite/aseprite'
         submodules: 'recursive'
     # - uses: turtlesec-no/get-ninja@main
     - name: Install Dependencies
