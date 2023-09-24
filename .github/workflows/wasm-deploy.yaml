@@ -32,9 +32,10 @@ jobs:
         path: aseprite
         key: ${{ runner.os }}-aseprite
 
-    - uses: turtlesec-no/get-ninja@main
+    - name: Setup Ninja for Aseprite
+      uses: turtlesec-no/get-ninja@main
       if: steps.cache-aseprite.outputs.cache-hit != 'true'
-    - name: Install Dependencies
+    - name: Install Aseprite Dependencies
       if: steps.cache-aseprite.outputs.cache-hit != 'true'
       shell: bash
       run: |
