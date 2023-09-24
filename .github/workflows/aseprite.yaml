@@ -7,6 +7,7 @@ on:
 env:
   BUILD_TYPE: RelWithDebInfo
   ENABLE_UI: off
+  TARGET_DIR: off
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -15,6 +16,14 @@ jobs:
       with:
         repository: 'aseprite/aseprite'
         submodules: 'recursive'
+
+    - name: Cache Aseprite
+      id: cache-aseprite
+      uses: actions/cache@v3
+      with:
+        path: aseprite
+        key: ${{ runner.os }}-aseprite
+
     - uses: turtlesec-no/get-ninja@main
     - name: Install Dependencies
       shell: bash
@@ -26,7 +35,7 @@ jobs:
       shell: bash
       run: |
         export enable_ccache=on
-        cmake -S . -B build -G Ninja \
+        cmake -S . -B ${{ env.TARGET_DIR }} -G Ninja \
           -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
           -DCMAKE_OSX_DEPLOYMENT_TARGET=10.9 \
           -DENABLE_TESTS=ON \
@@ -35,5 +44,8 @@ jobs:
     - name: Compiling
       shell: bash
       run: |
-        cd build && ninja
+        cd ${{ env.TARGET_DIR }} && ninja
+    - name: Move executable for cache
+      run: |
+        mv ${{ env.TARGET_DIR }}/aseprite .
 

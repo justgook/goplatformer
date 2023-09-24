@@ -16,21 +16,32 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          lfs: true
-      - name: Setup Go
-        uses: actions/setup-go@v4
-        with:
-          go-version-file: "go.mod"
-          cache-dependency-path: "**/*.sum"
-      - name: Build Github Pages
-        run: make web
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v2.0.0
-        with:
-          path: ./${{ env.WEB_DIR }}
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        lfs: true
+    - name: Setup Go
+      uses: actions/setup-go@v4
+      with:
+        go-version-file: "go.mod"
+        cache-dependency-path: "**/*.sum"
+    - name: Cache Aseprite
+      id: cache-aseprite
+      uses: actions/cache@v3
+      with:
+        path: aseprite
+        key: ${{ runner.os }}-aseprite
+
+    - name: Fail Job if no cache found
+      if: steps.cache-primes.outputs.cache-hit != 'true'
+      run: exit 1
+
+    - name: Build Github Pages
+      run: make web
+    - name: Upload artifact
+      uses: actions/upload-pages-artifact@v2.0.0
+      with:
+        path: ./${{ env.WEB_DIR }}
   deploy:
     needs: build
     permissions:
@@ -41,6 +52,7 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v2.0.4
+    - name: Deploy to GitHub Pages
+      id: deployment
+      uses: actions/deploy-pages@v2.0.4
+
