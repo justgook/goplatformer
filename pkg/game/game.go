@@ -22,4 +22,3 @@ type SpritesheetRaw struct {
 	Image    []byte
 	AnimData AnimDataMap
 }
-

@@ -77,4 +77,3 @@ func convertAsprite2AnimDataMap(input *aseprite.Animation) game.AnimDataMap {
 
 	return output
 }
-

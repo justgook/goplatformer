@@ -1,5 +1,6 @@
 // Package cli implements a colored text handler suitable for command-line interfaces.
 package cli
+
 //
 // import (
 // 	"fmt"
@@ -83,4 +84,3 @@ package cli
 // 	return nil
 // }
 //
-

@@ -81,4 +81,3 @@ type Direction string
 const (
 	Forward Direction = "forward"
 )
-

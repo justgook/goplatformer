@@ -211,7 +211,7 @@ aseprite/aseprite:
 		-DENABLE_CCACHE=off \
 		-DPNG_ARM_NEON=off
 	$(Q)cd $(TMP)/aseprite/build && ninja
-	$(Q)$(MKDIR_P) $(CURDIR)/aseprite
+	$(Q)$(MKDIR_P) "$(CURDIR)/aseprite"
 	$(Q)cp -R $(TMP)/aseprite/build/bin/aseprite $(TMP)/aseprite/build/bin/data "$(CURDIR)/aseprite/"
 	$(Q)rm -rf $(TMP)
 
