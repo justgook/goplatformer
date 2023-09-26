@@ -21,6 +21,7 @@ jobs:
       with:
         lfs: true
     - name: Setup Go
+      id: setup-go
       uses: actions/setup-go@v4
       with:
         go-version-file: "go.mod"
@@ -35,14 +36,13 @@ jobs:
     - name: Setup Ninja for Aseprite
       uses: turtlesec-no/get-ninja@main
       if: steps.cache-aseprite.outputs.cache-hit != 'true'
-    - name: Install Aseprite Dependencies
-      if: steps.cache-aseprite.outputs.cache-hit != 'true'
+    - name: Install Aseprite/Ebitengine Dependencies
+      if: steps.cache-aseprite.outputs.cache-hit != 'true' || steps.setup-go.outputs.cache-hit != 'true'
       shell: bash
       run: |
         sudo apt-get update -qq
         sudo apt-get install -y \
           libx11-dev libxcursor-dev libxi-dev
-
     - name: Build Github Pages
       run: make web
     - name: Upload artifact
@@ -62,4 +62,3 @@ jobs:
     - name: Deploy to GitHub Pages
       id: deployment
       uses: actions/deploy-pages@v2.0.4
-
