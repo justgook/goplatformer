@@ -96,22 +96,26 @@ update:
 $(BIN_WIN64_DIR)/game.exe: export GOOS=windows
 $(BIN_WIN64_DIR)/game.exe: export GOARCH=amd64
 $(BIN_WIN64_DIR)/game.exe: $(RESOURCES)
+	$(Q)echo ... building $@ from $<
 	$(Q)go build -ldflags="$(LDFLAGS)" -o $@ $(APP_DIR)
 
 
 $(BIN_MAC64_DIR)/game: export GOOS=darwin
 $(BIN_MAC64_DIR)/game: export GOARCH=amd64
 $(BIN_MAC64_DIR)/game: $(RESOURCES)
+	$(Q)echo ... building $@ from $<
 	$(Q)go build -ldflags="$(LDFLAGS)" -o $@ $(APP_DIR)
 
 $(BIN_MACAARC64_DIR)/game: export GOOS=darwin
 $(BIN_MACAARC64_DIR)/game: export GOARCH=arm64
 $(BIN_MACAARC64_DIR)/game: $(RESOURCES)
+	$(Q)echo ... building $@ from $<
 	$(Q)go build -ldflags="$(LDFLAGS)" -o $@ $(APP_DIR)
 
 $(WEB_DIR)/game.wasm: export GOOS=js
 $(WEB_DIR)/game.wasm: export GOARCH=wasm
 $(WEB_DIR)/game.wasm: $(RESOURCES)
+	$(Q)echo ... building $@ from $<
 	$(Q)$(MKDIR_P) $(dir $@)
 	$(Q)go build -ldflags="$(LDFLAGS)" -o $@ $(APP_DIR)
 
