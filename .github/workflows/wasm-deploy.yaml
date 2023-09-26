@@ -42,15 +42,15 @@ jobs:
           sudo apt-get install --no-install-recommends -y \
             libx11-dev libxcursor-dev libxi-dev \
             ninja-build
+
       - name: Install Ebiten dependencies
-        if: runner.os == 'Linux'
+        if: runner.os == 'Linux' && steps.setup-go.outputs.cache-hit != 'true'
         run: |
           sudo apt-get update -qq
           sudo apt-get --no-install-recommends -y \
             install libasound2-dev libgl1-mesa-dev libxcursor-dev libxi-dev libxinerama-dev libxrandr-dev libxxf86vm-dev
-
-      - name: Xvfb
-        if: runner.os == 'Linux'
+      - name: Setup display needed for GLFW to build
+        if: runner.os == 'Linux' && steps.setup-go.outputs.cache-hit != 'true'
         run: |
           Xvfb :99 -screen 0 1024x768x24 > /dev/null 2>&1 &
 
