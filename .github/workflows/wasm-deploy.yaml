@@ -16,41 +16,43 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-    - name: Checkout
-      uses: actions/checkout@v4
-      with:
-        lfs: true
-    - name: Setup Go
-      id: setup-go
-      uses: actions/setup-go@v4
-      with:
-        go-version-file: "go.mod"
-        cache-dependency-path: "**/*.sum"
-    - name: Cache Aseprite
-      id: cache-aseprite
-      uses: actions/cache@v3
-      with:
-        path: aseprite
-        key: ${{ runner.os }}-aseprite
-    - name: Install Aseprite Dependencies
-      if: steps.cache-aseprite.outputs.cache-hit != 'true'
-      shell: bash
-      run: |
-        sudo apt-get update -qq
-        sudo apt-get install --no-install-recommends -y \
-          libx11-dev libxcursor-dev libxi-dev \
-          ninja-build
-    - name: Install GLFW Dependencies
-      run: |
-        sudo apt-get update -qq 
-        sudo apt-get install --no-install-recommends -y \
-          libgl1-mesa-dev xorg-dev
-    - name: Build Github Pages
-      run: make web
-    - name: Upload artifact
-      uses: actions/upload-pages-artifact@v2.0.0
-      with:
-        path: ./${{ env.WEB_DIR }}
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+      - name: Setup Go
+        id: setup-go
+        uses: actions/setup-go@v4
+        with:
+          go-version-file: "go.mod"
+          cache-dependency-path: "**/*.sum"
+      - name: Cache Aseprite
+        id: cache-aseprite
+        uses: actions/cache@v3
+        with:
+          path: aseprite
+          key: ${{ runner.os }}-aseprite
+      - name: Install Aseprite Dependencies
+        if: steps.cache-aseprite.outputs.cache-hit != 'true'
+        shell: bash
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install --no-install-recommends -y \
+            libx11-dev libxcursor-dev libxi-dev \
+            ninja-build
+      - name: Install Ebiten dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get --no-install-recommends -y \
+            install libasound2-dev libgl1-mesa-dev libxcursor-dev libxi-dev libxinerama-dev libxrandr-dev libxxf86vm-dev
+
+      - name: Build Github Pages
+        run: make web
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v2.0.0
+        with:
+          path: ./${{ env.WEB_DIR }}
   deploy:
     needs: build
     permissions:
@@ -61,6 +63,6 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
-    - name: Deploy to GitHub Pages
-      id: deployment
-      uses: actions/deploy-pages@v2.0.4
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v2.0.4
