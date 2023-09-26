@@ -9,7 +9,7 @@ import (
 
 type LevelBinary struct {
 	Rooms    []*RoomBinary
-	tilemaps []*image.Image
+	tileMaps []*image.Image
 }
 
 type RoomBinary struct {

@@ -1,17 +1,22 @@
 package main
 
 import (
-	"encoding/gob"
 	"flag"
 	"fmt"
 	"log/slog"
 	"os"
 
 	"github.com/justgook/goplatformer/pkg/aseprite"
-	"github.com/justgook/goplatformer/pkg/game"
+	"github.com/justgook/goplatformer/pkg/bin"
+	"github.com/justgook/goplatformer/pkg/gameLogger/cli"
+	"github.com/justgook/goplatformer/pkg/util"
 )
 
 func main() {
+	handler := cli.New(os.Stderr, &cli.Options{
+		HandlerOptions: slog.HandlerOptions{Level: slog.LevelDebug},
+	})
+	slog.SetDefault(slog.New(handler))
 	outPath := flag.String("o", "unknown.gob", "output location")
 	dataPath := flag.String("data", "unknown.json", "json data file")
 	imgPath := flag.String("sprite", "unknown.png", "img data file")
@@ -35,30 +40,30 @@ func main() {
 		panic(err)
 	}
 
+	output := bin.AnimatedSprite{
+		Image: imageBytes,
+		Data:  convertAsprite2AnimDataMap(&data),
+	}
+	toFile := util.GetOrDie(output.Save())
 	file, _ := os.Create(*outPath)
 	defer file.Close()
-
-	encoder := gob.NewEncoder(file)
-	encoder.Encode(game.SpritesheetRaw{
-		Image:    imageBytes,
-		AnimData: convertAsprite2AnimDataMap(&data),
-	})
+	util.GetOrDie(file.Write(toFile))
 }
 
 // setup aseprite to:
 // Item File name `{layer} {frame}`
 // Item Tag Name `{tag}`
-func convertAsprite2AnimDataMap(input *aseprite.Animation) game.AnimDataMap {
-	output := make(game.AnimDataMap, len(input.Meta.FrameTags))
+func convertAsprite2AnimDataMap(input *aseprite.Animation) bin.AnimatedSpriteDataMap {
+	output := make(bin.AnimatedSpriteDataMap, len(input.Meta.FrameTags))
 	layerCount := len(input.Meta.Layers)
 	frameMaps := input.Frames
 	for _, anim := range input.Meta.FrameTags {
-		output[anim.Name] = make([]game.SpriteRawFrame, 0, anim.To-anim.From+1)
+		output[anim.Name] = make([]bin.AnimatedSpriteFrame, 0, anim.To-anim.From+1)
 		for i := anim.From; i <= anim.To; i++ {
-			item := game.SpriteRawFrame{Layers: make([]game.FrameDrawData, 0, layerCount)}
+			item := bin.AnimatedSpriteFrame{Layers: make([]bin.AnimatedSpriteFrameLayer, 0, layerCount)}
 			for _, layer := range input.Meta.Layers {
 				key := fmt.Sprintf("%s %d", layer.Name, i)
-				data := game.FrameDrawData{
+				data := bin.AnimatedSpriteFrameLayer{
 					W:  frameMaps[key].Frame.W,
 					H:  frameMaps[key].Frame.H,
 					X0: frameMaps[key].Frame.X,

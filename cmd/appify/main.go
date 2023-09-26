@@ -4,8 +4,10 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"github.com/justgook/goplatformer/pkg/gameLogger/cli"
 	"image"
 	"io"
+	"log/slog"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -16,6 +18,10 @@ import (
 )
 
 func main() {
+	handler := cli.New(os.Stderr, &cli.Options{
+		HandlerOptions: slog.HandlerOptions{Level: slog.LevelDebug},
+	})
+	slog.SetDefault(slog.New(handler))
 	if err := run(); err != nil {
 		fmt.Fprintf(os.Stderr, "%s", err)
 		os.Exit(2)
@@ -43,7 +49,7 @@ func run() error {
 
 	contentsPath := filepath.Join(outPath, "Contents")
 	macOSPath := filepath.Join(contentsPath, "MacOS")
-	resouresPath := filepath.Join(contentsPath, "Resources")
+	resourcesPath := filepath.Join(contentsPath, "Resources")
 	binFilePath := filepath.Join(macOSPath, binFile)
 
 	if err := os.MkdirAll(macOSPath, 0777); err != nil {
@@ -85,7 +91,7 @@ func run() error {
 		ShortVersionString: *version,
 	}
 	if *icon != "" {
-		iconPath, err := prepareIcons(*icon, resouresPath)
+		iconPath, err := prepareIcons(*icon, resourcesPath)
 		if err != nil {
 			return fmt.Errorf("icon: %w", err)
 		}
@@ -119,8 +125,8 @@ func prepareIcons(iconPath, resourcesPath string) (string, error) {
 		return "", fmt.Errorf("open icon file: %w", err)
 	}
 	defer fsrc.Close()
-	if err := os.MkdirAll(resourcesPath, 0777); err != nil {
-		return "", fmt.Errorf("os.MkdirAll resourcesPath: %w", err)
+	if err2 := os.MkdirAll(resourcesPath, 0777); err2 != nil {
+		return "", fmt.Errorf("os.MkdirAll resourcesPath: %w", err2)
 	}
 	destFile := filepath.Join(resourcesPath, "icon.icns")
 	fdst, err := os.Create(destFile)
@@ -130,17 +136,16 @@ func prepareIcons(iconPath, resourcesPath string) (string, error) {
 	defer fdst.Close()
 	switch ext {
 	case ".icns": // just copy the .icns file
-		_, err := io.Copy(fdst, fsrc)
-		if err != nil {
-			return destFile, fmt.Errorf("copying %s: %w", iconPath, err)
+		if _, err2 := io.Copy(fdst, fsrc); err2 != nil {
+			return destFile, fmt.Errorf("copying %s: %w", iconPath, err2)
 		}
 	case ".png", ".jpg", ".jpeg", ".gif": // process any images
-		srcImg, _, err := image.Decode(fsrc)
-		if err != nil {
-			return destFile, fmt.Errorf("decode image: %w", err)
+		srcImg, _, err2 := image.Decode(fsrc)
+		if err2 != nil {
+			return destFile, fmt.Errorf("decode image: %w", err2)
 		}
-		if err := icns.Encode(fdst, srcImg); err != nil {
-			return destFile, fmt.Errorf("generate icns file: %w", err)
+		if err3 := icns.Encode(fdst, srcImg); err3 != nil {
+			return destFile, fmt.Errorf("generate icns file: %w", err3)
 		}
 	default:
 		return destFile, errors.New(ext + " icons not supported")

@@ -1,8 +1,8 @@
-package main
+package game
 
 import "github.com/hajimehoshi/ebiten/v2"
 
-type StageInterface interface {
+type Stage interface {
 	Init()
 	Update()
 	Draw(*ebiten.Image)

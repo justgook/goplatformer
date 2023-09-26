@@ -3,6 +3,7 @@ module github.com/justgook/goplatformer
 go 1.21
 
 require (
+	github.com/fatih/color v1.15.0
 	github.com/golang/freetype v0.0.0-20170609003504-e2365dfdc4a0
 	github.com/hajimehoshi/ebiten/v2 v2.6.0
 	github.com/jackmordaunt/icns/v2 v2.2.6
@@ -15,6 +16,8 @@ require (
 require (
 	github.com/ebitengine/purego v0.5.0 // indirect
 	github.com/jezek/xgb v1.1.0 // indirect
+	github.com/mattn/go-colorable v0.1.13 // indirect
+	github.com/mattn/go-isatty v0.0.17 // indirect
 	github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.1 // indirect

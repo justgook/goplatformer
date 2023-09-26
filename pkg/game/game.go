@@ -1,24 +1,41 @@
 package game
 
-type AnimDataMap = map[string][]SpriteRawFrame
+import (
+	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/justgook/goplatformer/pkg/game/stage"
+	"image/color"
+)
 
-type SpriteRawFrame struct {
-	Duration int
-	Layers   []FrameDrawData
+type Game struct {
+	Stages        []stage.Stage
+	Stage         stage.Stage
+	CurrentWorld  int
+	Width, Height int
 }
 
-type FrameDrawData struct {
-	W  int
-	H  int
-	TX int
-	TY int
-	X0 int
-	Y0 int
-	X1 int
-	Y1 int
+func New() *Game {
+	ebiten.SetWindowResizingMode(ebiten.WindowResizingModeEnabled)
+	ebiten.SetWindowTitle("Game title goes here")
+
+	current := &stage.Play{}
+	current.Init()
+
+	return &Game{
+		Stage: current,
+	}
 }
 
-type SpritesheetRaw struct {
-	Image    []byte
-	AnimData AnimDataMap
+func (g *Game) Layout(w, h int) (int, int) {
+	return w, h
 }
+func (g *Game) Update() error {
+	g.Stage.Update()
+
+	return nil
+}
+
+func (g *Game) Draw(screen *ebiten.Image) {
+	screen.Fill(color.RGBA{R: 20, G: 20, B: 40, A: 255})
+	g.Stage.Draw(screen)
+}
+
