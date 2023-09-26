@@ -40,11 +40,11 @@ jobs:
         sudo apt-get install --no-install-recommends -y \
           libx11-dev libxcursor-dev libxi-dev \
           ninja-build
-    - name: Just weird stuff for new runners
+    - name: Install GLFW Dependencies
       run: |
         sudo apt-get update -qq 
-        sudo apt-get install -y \
-          libxrandr-dev
+        sudo apt-get install --no-install-recommends -y \
+          libgl1-mesa-dev xorg-dev
     - name: Build Github Pages
       run: make web
     - name: Upload artifact
