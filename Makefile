@@ -111,7 +111,7 @@ $(BIN_MACAARC64_DIR)/game: $(RESOURCES)
 
 $(WEB_DIR)/game.wasm: export GOOS=js
 $(WEB_DIR)/game.wasm: export GOARCH=wasm
-$(WEB_DIR)/game.wasm: $(RESOURCES)
+$(WEB_DIR)/game.wasm:
 	$(Q)$(MKDIR_P) $(dir $@)
 	$(Q)go build -ldflags="$(LDFLAGS)" -o $@ $(APP_DIR)
 
@@ -154,7 +154,6 @@ $(WEB_DIR)/index.html:
 ASEPRITE = /Applications/Aseprite.app/Contents/MacOS/aseprite
 ifeq ("$(wildcard $(ASEPRITE))","")
 	ASEPRITE=aseprite/aseprite
-#
 # else
 # 	# ASEPRITE="C:\Program Files\Aseprite\aseprite.exe"
 # 	$(error please install Aseprite)
