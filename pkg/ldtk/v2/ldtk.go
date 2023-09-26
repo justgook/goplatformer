@@ -1,4 +1,4 @@
-// This file was generated from JSON Schema using quicktype, do not modify it directly.
+// This file was generated from JSON Schema using quickType, do not modify it directly.
 // To parse and unparse this JSON data, add this code to your project and do:
 //
 //    ldtkJSON, err := UnmarshalLdtkJSON(bytes)
@@ -19,14 +19,14 @@ func (r *LdtkJSON) Marshal() ([]byte, error) {
 }
 
 // This file is a JSON schema of files created by LDtk level editor (https://ldtk.io).
-//
-// This is the root of any Project JSON file. It contains:  - the project settings, - an
+
+// LdtkJSON is the root of any Project JSON file. It contains:  - the project settings, - an
 // array of levels, - a group of definitions (that can probably be safely ignored for most
 // users).
 type LdtkJSON struct {
 	// This object is not actually used by LDtk. It ONLY exists to force explicit references to
 	// all types, to make sure QuickType finds them and integrate all of them. Otherwise,
-	// Quicktype will drop types that are not explicitely used.
+	// QuickType will drop types that are not explicitly used.
 	ForcedRefs *ForcedRefs `json:"__FORCED_REFS,omitempty"`
 	// LDtk application build identifier.<br/>  This is only used to identify the LDtk version
 	// that generated this particular project file, which can be useful for specific bug fixing.
@@ -153,8 +153,8 @@ type LdtkCustomCommand struct {
 // from definitions is often duplicated in fields prefixed with a double underscore (eg.
 // `__identifier` or `__type`).  The 2 only definition types you might need here are
 // **Tilesets** and **Enums**.
-//
-// A structure containing all the definitions of this project
+
+// Definitions containing all the definitions of this project
 type Definitions struct {
 	// All entities definitions, including their custom fields
 	Entities []EntityDefinition `json:"entities"`
@@ -244,7 +244,7 @@ type EntityDefinition struct {
 	Width int64 `json:"width"`
 }
 
-// This section is mostly only intended for the LDtk editor app itself. You can safely
+// FieldDefinition is mostly only intended for the LDtk editor app itself. You can safely
 // ignore it.
 type FieldDefinition struct {
 	// Human readable value type. Possible values: `Int, Float, String, Bool, Color,
@@ -318,7 +318,7 @@ type FieldDefinition struct {
 	UseForSmartColor bool `json:"useForSmartColor"`
 }
 
-// This object represents a custom sub rectangle in a Tileset image.
+// TilesetRectangle object represents a custom sub rectangle in a Tileset image.
 type TilesetRectangle struct {
 	// Height in pixels
 	H int64 `json:"h"`
@@ -397,7 +397,7 @@ type LayerDefinition struct {
 	// array order is not related to actual IntGrid values! As user can re-order IntGrid values
 	// freely, you may value "2" before value "1" in this array.
 	IntGridValues []IntGridValueDefinition `json:"intGridValues"`
-	// Group informations for IntGrid values
+	// Group information for IntGrid values
 	IntGridValuesGroups []IntGridValueGroupDefinition `json:"intGridValuesGroups"`
 	// Parallax horizontal factor (from -1 to 1, defaults to 0) which affects the scrolling
 	// speed of this layer, creating a fake 3D (parallax) effect.
@@ -451,7 +451,7 @@ type AutoLayerRuleGroup struct {
 	UsesWizard bool                      `json:"usesWizard"`
 }
 
-// This complex section isn't meant to be used by game devs at all, as these rules are
+// AutoLayerRuleDefinition complex section isn't meant to be used by game devs at all, as these rules are
 // completely resolved internally by the editor before any saving. You should just ignore
 // this part.
 type AutoLayerRuleDefinition struct {
@@ -512,7 +512,7 @@ type AutoLayerRuleDefinition struct {
 	YOffset int64 `json:"yOffset"`
 }
 
-// IntGrid value definition
+// IntGridValueDefinition represents IntGrid value definition
 type IntGridValueDefinition struct {
 	Color string `json:"color"`
 	// Parent group identifier (0 if none)
@@ -524,7 +524,7 @@ type IntGridValueDefinition struct {
 	Value int64 `json:"value"`
 }
 
-// IntGrid value group definition
+// IntGridValueGroupDefinition represents IntGrid value group definition
 type IntGridValueGroupDefinition struct {
 	// User defined color
 	Color *string `json:"color"`
@@ -534,8 +534,8 @@ type IntGridValueGroupDefinition struct {
 	Uid int64 `json:"uid"`
 }
 
-// The `Tileset` definition is the most important part among project definitions. It
-// contains some extra informations about each integrated tileset. If you only had to parse
+// TilesetDefinition is the most important part among project definitions. It
+// contains some extra information about each integrated tileset. If you only had to parse
 // one definition section, that would be the one.
 type TilesetDefinition struct {
 	// Grid-based height
@@ -573,25 +573,25 @@ type TilesetDefinition struct {
 	// Optional Enum definition UID used for this tileset meta-data
 	TagsSourceEnumUid *int64 `json:"tagsSourceEnumUid"`
 	TileGridSize      int64  `json:"tileGridSize"`
-	// Unique Intidentifier
-	Uid int64 `json:"uid"`
+	// Unique identifier
+	TilesetDefinition int64 `json:"uid"`
 }
 
-// In a tileset definition, user defined meta-data of a tile.
+// TileCustomMetadata is user defined meta-data of a tile.
 type TileCustomMetadata struct {
 	Data   string `json:"data"`
 	TileID int64  `json:"tileId"`
 }
 
-// In a tileset definition, enum based tag infos
+// EnumTagValue is in a tileset definition, enum based tag infos
 type EnumTagValue struct {
 	EnumValueID string  `json:"enumValueId"`
 	TileIDS     []int64 `json:"tileIds"`
 }
 
-// This object is not actually used by LDtk. It ONLY exists to force explicit references to
+// ForcedRefs is not actually used by LDtk. It ONLY exists to force explicit references to
 // all types, to make sure QuickType finds them and integrate all of them. Otherwise,
-// Quicktype will drop types that are not explicitely used.
+// QuickType will drop types that are not explicitly used.
 type ForcedRefs struct {
 	AutoLayerRuleGroup   *AutoLayerRuleGroup          `json:"AutoLayerRuleGroup,omitempty"`
 	AutoRuleDef          *AutoLayerRuleDefinition     `json:"AutoRuleDef,omitempty"`
@@ -684,7 +684,7 @@ type FieldInstance struct {
 	RealEditorValues []interface{} `json:"realEditorValues"`
 }
 
-// This object describes the "location" of an Entity instance in the project worlds.
+// ReferenceToAnEntityInstance describes the "location" of an Entity instance in the project worlds.
 type ReferenceToAnEntityInstance struct {
 	// IID of the refered EntityInstance
 	EntityIid string `json:"entityIid"`
@@ -696,7 +696,7 @@ type ReferenceToAnEntityInstance struct {
 	WorldIid string `json:"worldIid"`
 }
 
-// This object is just a grid-based coordinate used in Field values.
+// GridPoint is just a grid-based coordinate used in Field values.
 type GridPoint struct {
 	// X grid-based coordinate
 	Cx int64 `json:"cx"`
@@ -704,7 +704,7 @@ type GridPoint struct {
 	Cy int64 `json:"cy"`
 }
 
-// IntGrid value instance
+// IntGridValueInstance is IntGrid value instance
 type IntGridValueInstance struct {
 	// Coordinate ID in the layer grid
 	CoordID int64 `json:"coordId"`
@@ -773,7 +773,7 @@ type LayerInstance struct {
 	Visible bool `json:"visible"`
 }
 
-// This structure represents a single tile from a given Tileset.
+// TileInstance represents a single tile from a given Tileset.
 type TileInstance struct {
 	// Alpha/opacity of the tile (0-1, defaults to 1)
 	A float64 `json:"a"`
@@ -793,7 +793,7 @@ type TileInstance struct {
 	T int64 `json:"t"`
 }
 
-// This section contains all the level data. It can be found in 2 distinct forms, depending
+// The Level section contains all the level data. It can be found in 2 distinct forms, depending
 // on Project current settings:  - If "*Separate level files*" is **disabled** (default):
 // full level data is *embedded* inside the main Project JSON file, - If "*Separate level
 // files*" is **enabled**: level data is stored in *separate* standalone `.ldtkl` files (one
@@ -865,7 +865,7 @@ type Level struct {
 	WorldY int64 `json:"worldY"`
 }
 
-// Level background image position info
+// LevelBackgroundPosition is level background image position info
 type LevelBackgroundPosition struct {
 	// An array of 4 float values describing the cropped sub-rectangle of the displayed
 	// background image. This cropping happens when original is larger than the level bounds.
@@ -879,7 +879,7 @@ type LevelBackgroundPosition struct {
 	TopLeftPx []int64 `json:"topLeftPx"`
 }
 
-// Nearby level info
+// NeighbourLevel Nearby level info
 type NeighbourLevel struct {
 	// A single lowercase character tipping on the level location (`n`orth, `s`outh, `w`est,
 	// `e`ast).<br/>  Since 1.4.0, this character value can also be `<` (neighbour depth is
@@ -898,7 +898,7 @@ type LdtkTableOfContentEntry struct {
 	Instances  []ReferenceToAnEntityInstance `json:"instances"`
 }
 
-// **IMPORTANT**: this type is available as a preview. You can rely on it to update your
+// World **IMPORTANT**: this type is available as a preview. You can rely on it to update your
 // importers, for when it will be officially available.  A World contains multiple levels,
 // and it has its own layout settings.
 type World struct {
@@ -923,7 +923,7 @@ type World struct {
 	WorldLayout *WorldLayout `json:"worldLayout"`
 }
 
-// Possible values: `Manual`, `AfterLoad`, `BeforeSave`, `AfterSave`
+// When possible values: `Manual`, `AfterLoad`, `BeforeSave`, `AfterSave`
 type When string
 
 const (
@@ -933,7 +933,7 @@ const (
 	Manual     When = "Manual"
 )
 
-// Possible values: `Any`, `OnlySame`, `OnlyTags`, `OnlySpecificEntity`
+// AllowedRefs is possible values: `Any`, `OnlySame`, `OnlyTags`, `OnlySpecificEntity`
 type AllowedRefs string
 
 const (
@@ -943,7 +943,7 @@ const (
 	OnlyTags           AllowedRefs = "OnlyTags"
 )
 
-// Possible values: `Hidden`, `ValueOnly`, `NameAndValue`, `EntityTile`, `LevelTile`,
+// EditorDisplayMode possible values: `Hidden`, `ValueOnly`, `NameAndValue`, `EntityTile`, `LevelTile`,
 // `Points`, `PointStar`, `PointPath`, `PointPathLoop`, `RadiusPx`, `RadiusGrid`,
 // `ArrayCountWithLabel`, `ArrayCountNoLabel`, `RefLinkBetweenPivots`,
 // `RefLinkBetweenCenters`
@@ -976,7 +976,7 @@ const (
 	Center  EditorDisplayPos = "Center"
 )
 
-// Possible values: `ZigZag`, `StraightArrow`, `CurvedArrow`, `ArrowsLine`, `DashedLine`
+// EditorLinkStyle possible values: `ZigZag`, `StraightArrow`, `CurvedArrow`, `ArrowsLine`, `DashedLine`
 type EditorLinkStyle string
 
 const (
@@ -1002,7 +1002,7 @@ const (
 	LangXML      TextLanguageMode = "LangXml"
 )
 
-// Possible values: `DiscardOldOnes`, `PreventAdding`, `MoveLastOne`
+// LimitBehavior possible values: `DiscardOldOnes`, `PreventAdding`, `MoveLastOne`
 type LimitBehavior string
 
 const (
@@ -1011,7 +1011,7 @@ const (
 	PreventAdding  LimitBehavior = "PreventAdding"
 )
 
-// If TRUE, the maxCount is a "per world" limit, if FALSE, it's a "per level". Possible
+// LimitScope if TRUE, the maxCount is a "per world" limit, if FALSE, it's a "per level". Possible
 // values: `PerLayer`, `PerLevel`, `PerWorld`
 type LimitScope string
 
@@ -1021,7 +1021,7 @@ const (
 	PerWorld LimitScope = "PerWorld"
 )
 
-// Possible values: `Rectangle`, `Ellipse`, `Tile`, `Cross`
+// RenderMode possible values: `Rectangle`, `Ellipse`, `Tile`, `Cross`
 type RenderMode string
 
 const (
@@ -1031,7 +1031,7 @@ const (
 	Tile      RenderMode = "Tile"
 )
 
-// An enum describing how the the Entity tile is rendered inside the Entity bounds. Possible
+// TileRenderMode is enum describing how the the Entity tile is rendered inside the Entity bounds. Possible
 // values: `Cover`, `FitInside`, `Repeat`, `Stretch`, `FullSizeCropped`,
 // `FullSizeUncropped`, `NineSlice`
 type TileRenderMode string
@@ -1055,7 +1055,7 @@ const (
 	Vertical    Checker = "Vertical"
 )
 
-// Defines how tileIds array is used Possible values: `Single`, `Stamp`
+// TileMode defines how tileIds array is used Possible values: `Single`, `Stamp`
 type TileMode string
 
 const (
@@ -1110,7 +1110,7 @@ const (
 	WorldLayoutFree  WorldLayout = "Free"
 )
 
-// Naming convention for Identifiers (first-letter uppercase, full uppercase etc.) Possible
+// IdentifierStyle naming convention for Identifiers (first-letter uppercase, full uppercase etc.) Possible
 // values: `Capitalize`, `Uppercase`, `Lowercase`, `Free`
 type IdentifierStyle string
 
@@ -1121,7 +1121,7 @@ const (
 	Uppercase           IdentifierStyle = "Uppercase"
 )
 
-// "Image export" option when saving project. Possible values: `None`, `OneImagePerLayer`,
+// ImageExportMode is "Image export" option when saving project. Possible values: `None`, `OneImagePerLayer`,
 // `OneImagePerLevel`, `LayersAndLevels`
 type ImageExportMode string
 

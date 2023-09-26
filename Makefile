@@ -214,4 +214,3 @@ aseprite/aseprite:
 	$(Q)$(MKDIR_P) "$(CURDIR)/aseprite"
 	$(Q)cp -R $(TMP)/aseprite/build/bin/aseprite $(TMP)/aseprite/build/bin/data "$(CURDIR)/aseprite/"
 	$(Q)rm -rf $(TMP)
-

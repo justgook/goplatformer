@@ -54,3 +54,4 @@ func main() {
 	encoder := gob.NewEncoder(file)
 	encoder.Encode(output)
 }
+
