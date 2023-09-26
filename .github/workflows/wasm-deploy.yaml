@@ -37,7 +37,7 @@ jobs:
       shell: bash
       run: |
         sudo apt-get update -qq
-        sudo apt-get install -y \
+        sudo apt-get install --no-install-recommends -y \
           libx11-dev libxcursor-dev libxi-dev \
           ninja-build
     - name: Build Github Pages

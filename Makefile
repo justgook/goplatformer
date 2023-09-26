@@ -111,7 +111,7 @@ $(BIN_MACAARC64_DIR)/game: $(RESOURCES)
 
 $(WEB_DIR)/game.wasm: export GOOS=js
 $(WEB_DIR)/game.wasm: export GOARCH=wasm
-$(WEB_DIR)/game.wasm:
+$(WEB_DIR)/game.wasm: $(RESOURCES)
 	$(Q)$(MKDIR_P) $(dir $@)
 	$(Q)go build -ldflags="$(LDFLAGS)" -o $@ $(APP_DIR)
 
