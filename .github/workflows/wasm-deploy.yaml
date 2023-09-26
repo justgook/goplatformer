@@ -35,7 +35,7 @@ jobs:
 
     - name: Setup Ninja for Aseprite
       uses: turtlesec-no/get-ninja@main
-      if: steps.cache-aseprite.outputs.cache-hit != 'true'
+      if: steps.cache-aseprite.outputs.cache-hit != 'true' || steps.setup-go.outputs.cache-hit != 'true'
     - name: Install Aseprite/Ebitengine Dependencies
       if: steps.cache-aseprite.outputs.cache-hit != 'true' || steps.setup-go.outputs.cache-hit != 'true'
       shell: bash
