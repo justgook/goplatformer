@@ -43,14 +43,14 @@ jobs:
             libx11-dev libxcursor-dev libxi-dev \
             ninja-build
 
-      - name: Install Ebiten dependencies
-        if: runner.os == 'Linux' && steps.setup-go.outputs.cache-hit != 'true'
+      - name: Install Ebiten Linux dependencies
+        if: runner.os == 'Linux'
         run: |
           sudo apt-get update -qq
           sudo apt-get --no-install-recommends -y \
             install libasound2-dev libgl1-mesa-dev libxcursor-dev libxi-dev libxinerama-dev libxrandr-dev libxxf86vm-dev
       - name: Setup display needed for GLFW to build
-        if: runner.os == 'Linux' && steps.setup-go.outputs.cache-hit != 'true'
+        if: runner.os == 'Linux'
         run: |
           Xvfb :99 -screen 0 1024x768x24 > /dev/null 2>&1 &
 
