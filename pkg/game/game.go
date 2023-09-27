@@ -14,6 +14,7 @@ type Game struct {
 }
 
 func New() *Game {
+	ebiten.SetWindowSize(512, 512)
 	ebiten.SetWindowResizingMode(ebiten.WindowResizingModeEnabled)
 	ebiten.SetWindowTitle("Game title goes here")
 
@@ -38,4 +39,3 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	screen.Fill(color.RGBA{R: 20, G: 20, B: 40, A: 255})
 	g.Stage.Draw(screen)
 }
-

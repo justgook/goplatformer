@@ -34,12 +34,17 @@ SRC_LEVEL = $(wildcard $(ASSET_DIR)/*.ldtk)
 SRC_LEVEL += $(wildcard $(ASSET_DIR)/*/*.ldtk)
 SRC_LEVEL += $(wildcard $(ASSET_DIR)/*/*/*.ldtk)
 
-SRC_SPRITE = $(wildcard $(ASSET_DIR)/*.aseprite)
-SRC_SPRITE += $(wildcard $(ASSET_DIR)/*/*.aseprite)
-SRC_SPRITE += $(wildcard $(ASSET_DIR)/*/*/*.aseprite)
+SRC_TILESET = $(wildcard $(ASSET_DIR)/*.tileset.aseprite)
+SRC_TILESET += $(wildcard $(ASSET_DIR)/*/*.tileset.aseprite)
+SRC_TILESET += $(wildcard $(ASSET_DIR)/*/*/*.tileset.aseprite)
+
+SRC_SPRITE = $(wildcard $(ASSET_DIR)/*.sprite.aseprite)
+SRC_SPRITE += $(wildcard $(ASSET_DIR)/*/*.sprite.aseprite)
+SRC_SPRITE += $(wildcard $(ASSET_DIR)/*/*/*.sprite.aseprite)
 
 RESOURCES := $(SRC_LEVEL:.ldtk=.level)
-RESOURCES += $(SRC_SPRITE:.aseprite=.sprite)
+RESOURCES += $(SRC_TILESET:.tileset.aseprite=.tileset.png)
+RESOURCES += $(SRC_SPRITE:.sprite.aseprite=.sprite)
 RESOURCES := $(subst $(ASSET_DIR),$(BUILD_DIR),$(RESOURCES))
 
 APP_DIR := ./cmd/game
@@ -175,28 +180,39 @@ resources: $(RESOURCES)
 
 $(BUILD_DIR)/%.level: export GOOS=$(SYS_GOOS)
 $(BUILD_DIR)/%.level: export GOARCH=$(SYS_GOARCH)
-$(BUILD_DIR)/%.level: $(ASSET_DIR)/%.ldtk
+$(BUILD_DIR)/%.level: $(ASSET_DIR)/%.ldtk $(BUILD_DIR)/%.tileset.png
 	$(Q)echo ... building $@ from $<
 	$(Q)$(MKDIR_P) $(dir $@)
-	$(Q)go run ./cmd/level -o $@ $<
+	$(Q)go run ./cmd/level \
+		-o $@ \
+		--tileset $(BUILD_DIR)/$*.tileset.png \
+		--level $(ASSET_DIR)/$*.ldtk
 
 $(BUILD_DIR)/%.sprite: export GOOS=$(SYS_GOOS)
 $(BUILD_DIR)/%.sprite: export GOARCH=$(SYS_GOARCH)
-$(BUILD_DIR)/%.sprite: $(BUILD_DIR)/%.png $(BUILD_DIR)/%.json
+$(BUILD_DIR)/%.sprite: $(BUILD_DIR)/%.sprite.png $(BUILD_DIR)/%.sprite.json
 	$(Q)echo ... building $@ from $<
 	$(Q)$(MKDIR_P) $(dir $@)
 	$(Q)go run ./cmd/sprite \
 		-o $@ \
-		--data $(BUILD_DIR)/$*.json \
-		--sprite $(BUILD_DIR)/$*.png
+		--data $(BUILD_DIR)/$*.sprite.json \
+		--sprite $(BUILD_DIR)/$*.sprite.png
 
-$(BUILD_DIR)/%.png $(BUILD_DIR)/%.json &: $(ASSET_DIR)/%.aseprite $(ASEPRITE)
+$(BUILD_DIR)/%.tileset.png: $(ASSET_DIR)/%.tileset.aseprite $(ASEPRITE)
 	$(Q)echo ... building $@ from $<
 	$(Q)$(MKDIR_P) $(dir $@)
-	$(ASEPRITE) -b \
-		--data $(BUILD_DIR)/$*.json \
+	$(Q)$(ASEPRITE) -b \
+		$< \
+		--save-as $@ \
+		--oneframe
+
+$(BUILD_DIR)/%.sprite.png $(BUILD_DIR)/%.sprite.json &: $(ASSET_DIR)/%.sprite.aseprite $(ASEPRITE)
+	$(Q)echo ... building $@ from $<
+	$(Q)$(MKDIR_P) $(dir $@)
+	$(Q)$(ASEPRITE) -b \
+		--data $(BUILD_DIR)/$*.sprite.json \
 		--format json-hash \
-		--sheet $(BUILD_DIR)/$*.png \
+		--sheet $(BUILD_DIR)/$*.sprite.png \
 		--sheet-type packed \
 		--sheet-pack \
 		--split-layers \
@@ -225,3 +241,4 @@ aseprite/aseprite:
 	$(Q)$(MKDIR_P) "$(CURDIR)/aseprite"
 	$(Q)cp -R $(TMP)/aseprite/build/bin/aseprite $(TMP)/aseprite/build/bin/data "$(CURDIR)/aseprite/"
 	$(Q)rm -rf $(TMP)
+

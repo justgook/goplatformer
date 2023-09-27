@@ -3,15 +3,14 @@ package bin
 import (
 	"bytes"
 	"encoding/gob"
-	"image"
 
 	"github.com/justgook/goplatformer/pkg/resolv/v2"
 )
 
 type TagType = int64
 type Level struct {
-	Rooms    []*Room
-	TileMaps []*image.Image
+	Rooms []*Room
+	Image []byte
 }
 
 type Doors struct {
@@ -21,8 +20,14 @@ type Doors struct {
 	W bool
 }
 
+type Tile struct {
+	X int64
+	Y int64
+	T int64
+}
+
 type Room struct {
-	Layers    [][]int
+	Layers    [][]Tile
 	Doors     Doors
 	W         int
 	H         int

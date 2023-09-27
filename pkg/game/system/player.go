@@ -40,7 +40,8 @@ func NewPlayer(space *resolv.Space[bin.TagType]) *Player {
 func PlayerUpdate(player *Player) {
 	platformTag := int64(3)
 	solidTag := int64(1)
-	rampTag := int64(5)
+	rampTag := int64(123)
+        exits := []int64{5,6,7,8}
 	// Now we update the Player's movement. This is the real bread-an-butter of this example, naturally.
 	// player := world.Player
 
@@ -85,8 +86,12 @@ func PlayerUpdate(player *Player) {
 	}
 
 	// Check for jumping.
-	jumpKeyJustPressed := inpututil.IsKeyJustPressed(ebiten.KeyX) || inpututil.IsKeyJustPressed(ebiten.KeySpace)
-	if jumpKeyJustPressed || ebiten.IsGamepadButtonPressed(0, 0) || ebiten.IsGamepadButtonPressed(1, 0) {
+	jumpKeyJustPressed := inpututil.IsKeyJustPressed(ebiten.KeyX) ||
+		inpututil.IsKeyJustPressed(ebiten.KeySpace) ||
+		ebiten.IsGamepadButtonPressed(0, 0) ||
+		ebiten.IsGamepadButtonPressed(1, 0)
+
+	if jumpKeyJustPressed {
 		if (ebiten.IsKeyPressed(ebiten.KeyDown) || ebiten.GamepadAxisValue(0, 1) > 0.1 || ebiten.GamepadAxisValue(1, 1) > 0.1) &&
 			player.OnGround != nil && player.OnGround.HaveTags(platformTag) {
 			player.IgnorePlatform = player.OnGround
@@ -107,6 +112,9 @@ func PlayerUpdate(player *Player) {
 			}
 		}
 	}
+
+
+
 
 	// We handle horizontal movement separately from vertical movement. This is, conceptually, decomposing movement into two phases / axes.
 	// By decomposing movement in this manner, we can handle each case properly (i.e. stop movement horizontally separately from vertical movement, as
@@ -157,6 +165,13 @@ func PlayerUpdate(player *Player) {
 	if dy >= 0 {
 		checkDistance++
 	}
+
+        /// Magic of exits
+	if check := player.Object.Check(0, checkDistance, exits...); check != nil {
+          player.Object.X = 256
+          player.Object.Y = 246
+          return
+        }
 
 	// We check for any solid / stand-able objects. In actuality, there aren't any other Objects
 	// with other tags in this Space, so we don't -have- to specify any tags, but it's good to be specific for clarity in this example.
@@ -313,3 +328,4 @@ func updatePlayerAnimation(player *Player) {
 	/****************************************************************************************/
 
 }
+

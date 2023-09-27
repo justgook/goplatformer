@@ -2,7 +2,6 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"log/slog"
 	"os"
 
@@ -22,15 +21,18 @@ func main() {
 	})
 	slog.SetDefault(slog.New(handler))
 
+	tileset := flag.String("tileset", "unknown.png", "img data file")
+	inputLevel := flag.String("level", "unknown.ldtk", "img data file")
 	outPath := flag.String("o", "unknown.gob", "output location")
 	flag.Parse()
-	args := flag.Args()
 
-	slog.Info(fmt.Sprintf("BUILDIN from: %v", args))
-	dataBytes := util.GetOrDie(os.ReadFile(args[0]))
+	dataBytes := util.GetOrDie(os.ReadFile(*inputLevel))
 	jsonData := util.GetOrDie(ldtk.UnmarshalLdtkJSON(dataBytes))
 
-	output := &bin.Level{}
+	output := &bin.Level{
+		Rooms: []*bin.Room{},
+		Image: util.GetOrDie(os.ReadFile(*tileset)),
+	}
 	collisionFound := false
 	slog.Info("========================================================================================")
 	for worldI, world := range jsonData.Worlds {
@@ -40,7 +42,7 @@ func main() {
 		slog.Info("got world:", "world", world.Identifier)
 		for _, room := range world.Levels {
 			outputRoom := &bin.Room{
-				Layers:    [][]int{},
+				Layers:    [][]bin.Tile{},
 				Doors:     bin.Doors{},
 				W:         int(room.PxWid),
 				H:         int(room.PxHei),
@@ -51,6 +53,7 @@ func main() {
 				"FieldInstances", room.FieldInstances,
 			)
 			for _, layer := range room.LayerInstances {
+				outputLayer := []bin.Tile{}
 				slog.Info("----")
 				slog.Info("working with layer",
 					"layer", layer.Identifier,
@@ -73,29 +76,31 @@ func main() {
 
 				if len(layer.AutoLayerTiles) > 0 {
 					slog.Info("set AutoLayerTiles:", "layer", layer.Identifier, "AutoLayerTiles", len(layer.AutoLayerTiles))
+					for _, tile := range layer.AutoLayerTiles {
+						outputLayer = append(outputLayer, bin.Tile{
+							X: tile.Px[0],
+							Y: tile.Px[1],
+							T: tile.T,
+						})
+					}
 				}
 
 				if len(layer.GridTiles) > 0 {
 					slog.Info("set GridTiles:", "layer", layer.Identifier, "GridTiles", len(layer.GridTiles))
 				}
+				outputRoom.Layers = append(outputRoom.Layers, outputLayer)
+
 			}
 			output.Rooms = append(output.Rooms, outputRoom)
 		}
 	}
 	slog.Info("========================================================================================")
+	slog.Info("layers:!!!", "bytes", len(output.Rooms[0].Layers))
 	toFile := util.GetOrDie(output.Save())
 	file, _ := os.Create(*outPath)
 	defer file.Close()
 	util.GetOrDie(file.Write(toFile))
-	// saveFile(*outPath, output)
 }
-
-// func saveFile(path string, output any) {
-// 	file, _ := os.Create(path)
-// 	encoder := gob.NewEncoder(file)
-// 	util.OrDie(encoder.Encode(output))
-// 	util.OrDie(file.Close())
-// }
 
 type Point struct {
 	X int64
@@ -207,4 +212,3 @@ func intGridToCollision(input []int64, w, h, cellSize int64) []*Object {
 
 	return output
 }
-
