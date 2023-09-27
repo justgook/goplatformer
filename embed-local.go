@@ -1,3 +1,5 @@
+//go:build !production
+
 package goplatformer
 
 import (
@@ -7,7 +9,5 @@ import (
 //go:embed build.nosync/sprite/Player.sprite
 var EmbeddedPlayerSprite []byte
 
-
 //go:embed build.nosync/level/level1.level
-var EmbeddedLevel[]byte
-
+var EmbeddedLevel []byte
