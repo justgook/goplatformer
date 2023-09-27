@@ -40,10 +40,13 @@ func (a *Level) Load(data []byte) error {
 	return nil
 }
 
-func (a *Level) Save() (data []byte, err error) {
+func (a *Level) Save() ([]byte, error) {
 	var b bytes.Buffer
 	encoder := gob.NewEncoder(&b)
-	encoder.Encode(*a)
+
+	if err := encoder.Encode(*a); err != nil {
+		return nil, err
+	}
 
 	return b.Bytes(), nil
 }

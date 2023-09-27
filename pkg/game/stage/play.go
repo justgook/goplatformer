@@ -1,15 +1,14 @@
 package stage
 
 import (
-	"image/color"
-	"log/slog"
-
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/vector"
 	"github.com/justgook/goplatformer"
 	"github.com/justgook/goplatformer/pkg/bin"
 	"github.com/justgook/goplatformer/pkg/game/system"
 	"github.com/justgook/goplatformer/pkg/resolv/v2"
+	"github.com/justgook/goplatformer/pkg/util"
+	"image/color"
 )
 
 type Play struct {
@@ -20,7 +19,7 @@ type Play struct {
 
 func (world *Play) Init() {
 	world.Level = &bin.Level{}
-	world.Level.Load(goplatformer.EmbeddedLevel)
+	util.OrDie(world.Level.Load(goplatformer.EmbeddedLevel))
 
 	room := world.Level.Rooms[0]
 	// Define the world's Space.
@@ -38,11 +37,7 @@ func (world *Play) Init() {
 
 	world.Player = system.NewPlayer(world.Space)
 
-	delme := &bin.AnimatedSprite{}
-	delme.Load(goplatformer.EmbeddedPlayerSprite)
-	world.Player.Animation.FromRaw(delme)
-	slog.Info("worl init done", "world.Player.Animation", world.Player.Animation)
-
+	util.OrDie(world.Player.Animation.Load(goplatformer.EmbeddedPlayerSprite))
 }
 
 func (world *Play) Update() {
@@ -58,10 +53,23 @@ func (world *Play) Draw(screen *ebiten.Image) {
 			drawColor = color.RGBA{R: 255, G: 50, B: 100, A: 255}
 		} else if o.HaveTags(1) {
 			drawColor = color.RGBA{R: 50, G: 255, B: 100, A: 255}
+		} else if o.HaveTags(99) /*Player*/ {
+			continue
 		} else {
 			drawColor = color.RGBA{R: 50, G: 50, B: 255, A: 255}
 		}
 		vector.StrokeRect(screen, float32(o.X+1), float32(o.Y+1), float32(o.W-2), float32(o.H-2), 1, drawColor, false)
 	}
-}
 
+	/* ===================================================== */
+	/* Player Sprite*/
+	player := world.Player.Object
+	op := &ebiten.DrawImageOptions{}
+	if !world.Player.FacingRight {
+		op.GeoM.Scale(-1, 1)
+		op.GeoM.Translate(48, 0)
+	}
+	op.GeoM.Translate(float64(player.X)-16, float64(player.Y)-16)
+	screen.DrawImage(world.Player.Animation.Sprite, op)
+	/* ===================================================== */
+}

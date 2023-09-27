@@ -25,14 +25,14 @@ type Player struct {
 
 func NewPlayer(space *resolv.Space[bin.TagType]) *Player {
 	p := &Player{
-		Object:      resolv.NewObject[bin.TagType](32, 128, 16, 24),
+		Object:      resolv.NewObject[bin.TagType](32, 128, 16, 24, 99),
 		FacingRight: true,
 		Animation:   &sprite.Animated{},
 	}
-	p.Object.SetShape(resolv.NewRectangle(0, 0, p.Object.W, p.Object.H))
+	p.Animation.SetName("Idle")
 
+	p.Object.SetShape(resolv.NewRectangle(0, 0, p.Object.W, p.Object.H))
 	space.Add(p.Object)
-	// p.Animation = initPlayerAnimation()
 
 	return p
 }
@@ -288,6 +288,7 @@ func PlayerUpdate(player *Player) {
 	}
 
 	player.Object.Update() // Update the player's position in the space.
+	updatePlayerAnimation(player)
 }
 
 func updatePlayerAnimation(player *Player) {

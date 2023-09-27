@@ -42,8 +42,16 @@ func main() {
 
 	output := bin.AnimatedSprite{
 		Image: imageBytes,
-		Data:  convertAsprite2AnimDataMap(&data),
+		Data:  convertAseprite2AnimDataMap(&data),
 	}
+
+	for _, frame := range data.Frames {
+		output.W = int(frame.SourceSize.W)
+		output.H = int(frame.SourceSize.H)
+
+		break
+	}
+
 	toFile := util.GetOrDie(output.Save())
 	file, _ := os.Create(*outPath)
 	defer file.Close()
@@ -53,7 +61,7 @@ func main() {
 // setup aseprite to:
 // Item File name `{layer} {frame}`
 // Item Tag Name `{tag}`
-func convertAsprite2AnimDataMap(input *aseprite.Animation) bin.AnimatedSpriteDataMap {
+func convertAseprite2AnimDataMap(input *aseprite.Animation) bin.AnimatedSpriteDataMap {
 	output := make(bin.AnimatedSpriteDataMap, len(input.Meta.FrameTags))
 	layerCount := len(input.Meta.Layers)
 	frameMaps := input.Frames

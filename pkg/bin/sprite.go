@@ -7,6 +7,8 @@ import (
 
 type AnimatedSprite struct {
 	Image []byte
+	W     int
+	H     int
 	Data  AnimatedSpriteDataMap
 }
 
@@ -38,10 +40,12 @@ func (a *AnimatedSprite) Load(data []byte) error {
 	return nil
 }
 
-func (a *AnimatedSprite) Save() (data []byte, err error) {
+func (a *AnimatedSprite) Save() ([]byte, error) {
 	var b bytes.Buffer
 	encoder := gob.NewEncoder(&b)
-	encoder.Encode(*a)
+	if err := encoder.Encode(*a); err != nil {
+		return nil, err
+	}
 
 	return b.Bytes(), nil
 }
