@@ -12,38 +12,43 @@ import (
 
 type objectType = resolv.Object[bin.TagType]
 type Player struct {
-	Object         *objectType
-	SpeedX         float64
-	SpeedY         float64
-	OnGround       *objectType
-	WallSliding    *objectType
-	FacingRight    bool
-	IgnorePlatform *objectType
+	Object          *objectType
+	SpeedX          float64
+	SpeedY          float64
+	OnGround        *objectType
+	WallSliding     *objectType
+	FacingRight     bool
+	IgnorePlatform  *objectType
+	HitExitCallback func(RoomExit)
 	// New Stuff
 	Animation *sprite.Animated
 }
 
-func NewPlayer(space *resolv.Space[bin.TagType]) *Player {
+func NewPlayer(callback func(RoomExit)) *Player {
 	p := &Player{
-		Object:      resolv.NewObject[bin.TagType](32, 128, 16, 24, 99),
-		FacingRight: true,
-		Animation:   &sprite.Animated{},
+		Object:          resolv.NewObject[bin.TagType](32, 128, 16, 24, 99),
+		FacingRight:     true,
+		Animation:       &sprite.Animated{},
+		HitExitCallback: callback,
 	}
 	p.Animation.SetName("Idle")
 
 	p.Object.SetShape(resolv.NewRectangle(0, 0, p.Object.W, p.Object.H))
-	space.Add(p.Object)
 
 	return p
 }
 
-func PlayerUpdate(player *Player) {
-	platformTag := int64(3)
+func (player *Player) Draw() *ebiten.Image {
+	return player.Animation.Sprite
+}
+
+func (player *Player) Update() {
 	solidTag := int64(1)
+	platformTag := int64(3)
 	rampTag := int64(123)
-        exits := []int64{5,6,7,8}
+	exits := []RoomExit{ExitNorth, ExitEast, ExitSouth, ExitWest}
+
 	// Now we update the Player's movement. This is the real bread-an-butter of this example, naturally.
-	// player := world.Player
 
 	friction := 0.5
 	accel := 0.5 + friction
@@ -113,9 +118,6 @@ func PlayerUpdate(player *Player) {
 		}
 	}
 
-
-
-
 	// We handle horizontal movement separately from vertical movement. This is, conceptually, decomposing movement into two phases / axes.
 	// By decomposing movement in this manner, we can handle each case properly (i.e. stop movement horizontally separately from vertical movement, as
 	// necessary). More can be seen on this topic over on this blog post on:
@@ -166,20 +168,19 @@ func PlayerUpdate(player *Player) {
 		checkDistance++
 	}
 
-        /// Magic of exits
+	/// Magic of exits
 	if check := player.Object.Check(0, checkDistance, exits...); check != nil {
-          player.Object.X = 256
-          player.Object.Y = 246
-          return
-        }
+
+		player.HitExitCallback(check.Objects[0].Tags[0])
+	}
 
 	// We check for any solid / stand-able objects. In actuality, there aren't any other Objects
 	// with other tags in this Space, so we don't -have- to specify any tags, but it's good to be specific for clarity in this example.
 	if check := player.Object.Check(0, checkDistance, solidTag, platformTag, rampTag); check != nil {
 		// So! Firstly, we want to see if we jumped up into something that we can slide around horizontally to avoid bumping the Player's head.
 
-		// Sliding around a misspaced jump is a small thing that makes jumping a bit more forgiving, and is something different polished platformers
-		// (like the 2D Mario games) do to make it a smidge more comfortable to play. For a visual example of this, see this excellent devlog post
+		// Sliding around a misplaced jump is a small thing that makes jumping a bit more forgiving, and is something different polished platformers
+		// (like the 2D Mario games) do to make it a more comfortable to play. For a visual example of this, see this excellent devlog post
 		// from the extremely impressive indie game, Leilani's Island: https://forums.tigsource.com/index.php?topic=46289.msg1387138#msg1387138
 
 		// To accomplish this sliding, we simply call Collision.SlideAgainstCell() to see if we can slide.
@@ -281,7 +282,7 @@ func PlayerUpdate(player *Player) {
 			}
 
 			if player.OnGround != nil {
-				player.WallSliding = nil    // Player's on the ground, so no wallsliding anymore.
+				player.WallSliding = nil    // Player's on the ground, so no wall sliding anymore.
 				player.IgnorePlatform = nil // Player's on the ground, so reset which platform is being ignored.
 			}
 
@@ -323,9 +324,10 @@ func updatePlayerAnimation(player *Player) {
 	} else {
 		player.Animation.SetName("Idle")
 	}
+
+	player.Animation.FlipH = !player.FacingRight
 	player.Animation.Update() // Update player animation frame
 
 	/****************************************************************************************/
 
 }
-

@@ -33,14 +33,17 @@ func main() {
 		Rooms: []*bin.Room{},
 		Image: util.GetOrDie(os.ReadFile(*tileset)),
 	}
-	collisionFound := false
+
 	slog.Info("========================================================================================")
 	for worldI, world := range jsonData.Worlds {
 		if worldI > 0 {
 			panic("game can have only one world (for now)")
 		}
 		slog.Info("got world:", "world", world.Identifier)
+
 		for _, room := range world.Levels {
+			//slog.With("room", room.Identifier)
+			collisionFound := false
 			outputRoom := &bin.Room{
 				Layers:    [][]bin.Tile{},
 				Doors:     bin.Doors{},
@@ -48,13 +51,15 @@ func main() {
 				H:         int(room.PxHei),
 				Collision: nil,
 			}
+
 			slog.Info("got room:",
 				"room", room.Identifier,
 				"FieldInstances", room.FieldInstances,
 			)
+			slog.Info("------------------------------------------------------")
+
 			for _, layer := range room.LayerInstances {
 				outputLayer := []bin.Tile{}
-				slog.Info("----")
 				slog.Info("working with layer",
 					"layer", layer.Identifier,
 					"IntGrid", len(layer.IntGridCSV),
@@ -89,7 +94,7 @@ func main() {
 					slog.Info("set GridTiles:", "layer", layer.Identifier, "GridTiles", len(layer.GridTiles))
 				}
 				outputRoom.Layers = append(outputRoom.Layers, outputLayer)
-
+				slog.Info("----")
 			}
 			output.Rooms = append(output.Rooms, outputRoom)
 		}
@@ -108,6 +113,10 @@ type Point struct {
 }
 
 func addToCache(cache map[*Object][]Point, matrix [][]*Object, obj *Object, x, y int64) {
+	//slog.Info("addToCache",
+	//	"X", x,
+	//	"Y", y,
+	//)
 	matrix[x][y] = obj
 	if cache[obj] == nil {
 		cache[obj] = []Point{}
@@ -124,9 +133,14 @@ func updateCache(cache map[*Object][]Point, matrix [][]*Object, was, now *Object
 }
 
 func intGridToCollision(input []int64, w, h, cellSize int64) []*Object {
-	tmp := make([][]*Object, h)
+	slog.Info("intGridToCollision",
+		"w", w,
+		"h", h,
+		"cellSize", cellSize,
+	)
+	tmp := make([][]*Object, w)
 	for i := range tmp {
-		tmp[i] = make([]*Object, w)
+		tmp[i] = make([]*Object, h)
 	}
 
 	cache := map[*Object][]Point{}
@@ -178,6 +192,23 @@ func intGridToCollision(input []int64, w, h, cellSize int64) []*Object {
 
 		y := int64(i) / w
 		x := int64(i) % w
+		if x >= int64(len(tmp)) {
+			slog.Info("intGridToCollision:out of bounds(X)",
+				"size", len(tmp),
+				"X", x,
+				"Y", y,
+			)
+			continue
+		}
+		if y >= int64(len(tmp[x])) {
+			slog.Info("intGridToCollision:out of bounds(Y)",
+				"size", len(tmp[x]),
+				"X", x,
+				"Y", y,
+			)
+			continue
+		}
+
 		obj := resolv.NewObject[Tag](
 			float64(x*cellSize),
 			float64(y*cellSize),

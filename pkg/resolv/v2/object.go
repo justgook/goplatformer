@@ -85,8 +85,25 @@ func (obj *Object[T]) AddTags(tags []T) {
 	obj.Tags = append(obj.Tags, tags...)
 }
 
+// AddTag adds Tags to the Object.
+func (obj *Object[T]) AddTag(tags ...T) {
+	obj.Tags = append(obj.Tags, tags...)
+}
+
 // RemoveTags removes Tags from the Object.
 func (obj *Object[T]) RemoveTags(tags []T) {
+	for _, tag := range tags {
+		for i, t := range obj.Tags {
+			if t == tag {
+				obj.Tags = append(obj.Tags[:i], obj.Tags[i+1:]...)
+				break
+			}
+		}
+	}
+}
+
+// RemoveTag removes Tags from the Object.
+func (obj *Object[T]) RemoveTag(tags ...T) {
 	for _, tag := range tags {
 		for i, t := range obj.Tags {
 			if t == tag {
@@ -316,4 +333,3 @@ func (obj *Object[T]) AddToIgnoreList(ignoreObj *Object[T]) {
 func (obj *Object[T]) RemoveFromIgnoreList(ignoreObj *Object[T]) {
 	delete(obj.ignoreList, ignoreObj)
 }
-
