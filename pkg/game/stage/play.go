@@ -2,17 +2,26 @@ package stage
 
 import (
 	"bytes"
-	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/justgook/goplatformer"
-	"github.com/justgook/goplatformer/pkg/bin"
-	"github.com/justgook/goplatformer/pkg/game/system"
-	"github.com/justgook/goplatformer/pkg/util"
 	"image"
 	"image/color"
 	_ "image/png"
+
+	"github.com/ebitenui/ebitenui"
+	"github.com/ebitenui/ebitenui/widget"
+	"github.com/hajimehoshi/ebiten/v2"
+
+	"github.com/justgook/goplatformer"
+	"github.com/justgook/goplatformer/pkg/bin"
+	"github.com/justgook/goplatformer/pkg/game/system"
+	"github.com/justgook/goplatformer/pkg/game/ui"
+	"github.com/justgook/goplatformer/pkg/util"
 )
 
 type Play struct {
+	UI     *ebitenui.UI
+	HUD    *widget.Container
+	MAP_UI *widget.Container
+
 	Level   *bin.Level
 	TileSet *ebiten.Image
 
@@ -22,22 +31,39 @@ type Play struct {
 }
 
 func (world *Play) Init() {
+	bitmapFont := util.GetOrDie(util.LoadFont(goplatformer.ExcelFont, 16))
+	world.HUD = ui.NewHUD(bitmapFont)
+	world.MAP_UI = ui.NewMap(bitmapFont)
+	world.HUD.AddChild(world.MAP_UI)
+	world.UI = &ebitenui.UI{
+		Container: world.HUD,
+	}
+	// ====================================================================================
+
 	world.Level = &bin.Level{}
 
 	util.OrDie(world.Level.Load(goplatformer.EmbeddedLevel))
 	img, _ := util.Get2OrDie(image.Decode(bytes.NewReader(world.Level.Image)))
 	world.TileSet = ebiten.NewImageFromImage(img)
 
-	world.Player = system.NewPlayer(world.draftExits)
+	world.Player = system.NewPlayer(world.draftExitsSystem)
 	util.OrDie(world.Player.Animation.Load(goplatformer.EmbeddedPlayerSprite))
 
-	world.draftExits(system.ExitEast)
+	world.draftExitsSystem(system.ExitEast)
 }
 
 func (world *Play) Update() {
+	if ebiten.IsKeyPressed(ebiten.KeyTab) {
+    	world.MAP_UI.GetWidget().Visibility = widget.Visibility_Show
+
+		} else {
+	world.MAP_UI.GetWidget().Visibility = widget.Visibility_Hide
+
+  }
+
 	world.Room.Update()
 	world.Player.Update()
-
+	world.UI.Update()
 }
 
 func (world *Play) Draw(screen *ebiten.Image) {
@@ -53,9 +79,12 @@ func (world *Play) Draw(screen *ebiten.Image) {
 	op.GeoM.Translate(float64(player.X)-16, float64(player.Y)-16)
 	screen.DrawImage(world.Player.Draw(), op)
 	/* ===================================================== */
+	world.UI.Draw(screen)
+
+	// ebitenutil.DebugPrint(screen, fmt.Sprintf("FPS: %f", ebiten.ActualFPS()))
 }
 
-func (world *Play) draftExits(exit system.RoomExit) {
+func (world *Play) draftExitsSystem(exit system.RoomExit) {
 	//
 	switch world.currentRoomId {
 	case 0:

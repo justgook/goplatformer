@@ -115,12 +115,16 @@ $(BIN_WIN64_DIR)/game.exe: $(RESOURCES)
 
 $(BIN_MAC64_DIR)/game: export GOOS=darwin
 $(BIN_MAC64_DIR)/game: export GOARCH=amd64
+$(BIN_MACAARC64_DIR)/game: export CGO_CFLAGS=-mmacosx-version-min=10.12
+$(BIN_MACAARC64_DIR)/game: export CGO_LDFLAGS=-mmacosx-version-min=10.12
 $(BIN_MAC64_DIR)/game: $(RESOURCES)
 	$(Q)echo ... building $@ from $<
 	$(Q)go build -tags $(TAGS) -ldflags="$(LDFLAGS)" -o $@ $(APP_DIR)
 
 $(BIN_MACAARC64_DIR)/game: export GOOS=darwin
 $(BIN_MACAARC64_DIR)/game: export GOARCH=arm64
+$(BIN_MACAARC64_DIR)/game: export CGO_CFLAGS=-mmacosx-version-min=10.12
+$(BIN_MACAARC64_DIR)/game: export CGO_LDFLAGS=-mmacosx-version-min=10.12
 $(BIN_MACAARC64_DIR)/game: $(RESOURCES)
 	$(Q)echo ... building $@ from $<
 	$(Q)go build -tags $(TAGS) -ldflags="$(LDFLAGS)" -o $@ $(APP_DIR)
@@ -142,9 +146,27 @@ define INDEX_HTML_CONTENT
 <head>
 <meta http-equiv="Permissions-Policy" content="interest-cohort=()">
 </head>
-<body>
+<body style="height:100vh;display:flex;justify-content:center;align-items:center">
+<progress id="progress" value="0" max="1"></progress>
 <script src="wasm_exec.js"></script>
 <script>
+async function fetchWithProgress(path, progress) {
+	const response = await fetch(path)
+	// May be incorrect if compressed
+	const contentLength = response.headers.get("Content-Length")
+	const total = parseInt(contentLength, 10)
+
+	let bytesLoaded = 0
+	const ts = new TransformStream({
+		transform(chunk, ctrl) {
+			bytesLoaded += chunk.byteLength
+			progress(bytesLoaded / total)
+			ctrl.enqueue(chunk)
+		},
+	})
+
+	return new Response(response.body.pipeThrough(ts), response)
+}
 // Polyfill
 if (!WebAssembly.instantiateStreaming) {
     WebAssembly.instantiateStreaming = async (resp, importObject) => {
@@ -153,8 +175,10 @@ if (!WebAssembly.instantiateStreaming) {
     };
 }
 const go = new Go();
-WebAssembly.instantiateStreaming(fetch("game.wasm"), go.importObject).then(result => {
+const aaa = document.getElementById("progress")
+WebAssembly.instantiateStreaming(fetchWithProgress("game.wasm", (a) => aaa.value = a), go.importObject).then(result => {
     go.run(result.instance);
+    aaa.remove()
 });
 document.body.querySelectorAll("script").forEach(a => a.remove())
 </script>
@@ -241,4 +265,3 @@ aseprite/aseprite:
 	$(Q)$(MKDIR_P) "$(CURDIR)/aseprite"
 	$(Q)cp -R $(TMP)/aseprite/build/bin/aseprite $(TMP)/aseprite/build/bin/data "$(CURDIR)/aseprite/"
 	$(Q)rm -rf $(TMP)
-
