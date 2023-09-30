@@ -2,42 +2,37 @@ package stage
 
 import (
 	"bytes"
+	"fmt"
 	"image"
 	"image/color"
 	_ "image/png"
 
-	"github.com/ebitenui/ebitenui"
-	"github.com/ebitenui/ebitenui/widget"
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 
 	"github.com/justgook/goplatformer"
 	"github.com/justgook/goplatformer/pkg/bin"
 	"github.com/justgook/goplatformer/pkg/game/system"
-	"github.com/justgook/goplatformer/pkg/game/ui"
 	"github.com/justgook/goplatformer/pkg/util"
 )
 
 type Play struct {
-	UI     *ebitenui.UI
-	HUD    *widget.Container
-	MAP_UI *widget.Container
-
 	Level   *bin.Level
 	TileSet *ebiten.Image
 
 	Player        *system.Player
 	Room          *system.Room
 	currentRoomId int
+	systems       system.Systems
 }
 
 func (world *Play) Init() {
-	bitmapFont := util.GetOrDie(util.LoadFont(goplatformer.ExcelFont, 16))
-	world.HUD = ui.NewHUD(bitmapFont)
-	world.MAP_UI = ui.NewMap(bitmapFont)
-	world.HUD.AddChild(world.MAP_UI)
-	world.UI = &ebitenui.UI{
-		Container: world.HUD,
+	world.systems = system.Systems{
+		&system.UI{},
 	}
+
+	world.systems.Init()
+
 	// ====================================================================================
 
 	world.Level = &bin.Level{}
@@ -50,20 +45,22 @@ func (world *Play) Init() {
 	util.OrDie(world.Player.Animation.Load(goplatformer.EmbeddedPlayerSprite))
 
 	world.draftExitsSystem(system.ExitEast)
+
 }
 
 func (world *Play) Update() {
-	if ebiten.IsKeyPressed(ebiten.KeyTab) {
-    	world.MAP_UI.GetWidget().Visibility = widget.Visibility_Show
-
-		} else {
-	world.MAP_UI.GetWidget().Visibility = widget.Visibility_Hide
-
-  }
+	world.systems.Update()
+	//if ebiten.IsKeyPressed(ebiten.KeyTab) {
+	//	world.MAP_UI.GetWidget().Visibility = widget.Visibility_Show
+	//
+	//} else {
+	//	world.MAP_UI.GetWidget().Visibility = widget.Visibility_Hide
+	//
+	//}
 
 	world.Room.Update()
 	world.Player.Update()
-	world.UI.Update()
+	//world.UI.Update()
 }
 
 func (world *Play) Draw(screen *ebiten.Image) {
@@ -79,9 +76,11 @@ func (world *Play) Draw(screen *ebiten.Image) {
 	op.GeoM.Translate(float64(player.X)-16, float64(player.Y)-16)
 	screen.DrawImage(world.Player.Draw(), op)
 	/* ===================================================== */
-	world.UI.Draw(screen)
-
+	//world.UI.Draw(screen)
+	world.systems.Draw(screen)
 	// ebitenutil.DebugPrint(screen, fmt.Sprintf("FPS: %f", ebiten.ActualFPS()))
+	ebitenutil.DebugPrint(screen, fmt.Sprintf("X%v,Y%v", world.Player.Object.X, world.Player.Object.Y))
+
 }
 
 func (world *Play) draftExitsSystem(exit system.RoomExit) {
@@ -91,8 +90,8 @@ func (world *Play) draftExitsSystem(exit system.RoomExit) {
 		switch exit {
 		case system.ExitNorth:
 			world.currentRoomId = 2
-			world.Player.Object.X = 100
-			world.Player.Object.Y = 420
+			world.Player.Object.X = 96
+			world.Player.Object.Y = 280
 		case system.ExitEast:
 			world.currentRoomId = 4
 			world.Player.Object.X = 32
@@ -109,7 +108,7 @@ func (world *Play) draftExitsSystem(exit system.RoomExit) {
 	case 1:
 		world.currentRoomId = 0
 		world.Player.Object.X = 432
-		world.Player.Object.Y = 448
+		world.Player.Object.Y = 312
 	case 2:
 		world.currentRoomId = 0
 		world.Player.Object.X = 224
@@ -126,3 +125,4 @@ func (world *Play) draftExitsSystem(exit system.RoomExit) {
 	world.Room = system.NewRoom(world.TileSet, 16, world.Level.Rooms[world.currentRoomId])
 	world.Room.Space.Add(world.Player.Object)
 }
+

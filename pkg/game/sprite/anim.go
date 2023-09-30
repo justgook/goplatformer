@@ -51,8 +51,8 @@ func (a *Animated) Update() {
 
 func (a *Animated) FromRaw(input *bin.AnimatedSprite) {
 	img, _ := util.Get2OrDie(image.Decode(bytes.NewReader(input.Image)))
-	a.data = input.Data
 	a.source = ebiten.NewImageFromImage(img)
+	a.data = input.Data
 	a.width = input.W
 	a.height = input.H
 	a.Sprite = ebiten.NewImage(input.W, input.H)
