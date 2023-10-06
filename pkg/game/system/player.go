@@ -24,6 +24,14 @@ type Player struct {
 	Animation *sprite.Animated
 }
 
+func (player *Player) Init() {
+
+}
+
+func (player *Player) Terminate() {
+
+}
+
 func NewPlayer(callback func(RoomExit)) *Player {
 	p := &Player{
 		Object:          resolv.NewObject[bin.TagType](32, 128, 16, 24, 99),
@@ -37,9 +45,12 @@ func NewPlayer(callback func(RoomExit)) *Player {
 
 	return p
 }
+func (player *Player) Draw(screen *ebiten.Image) {
+	object := player.Object
+	op := &ebiten.DrawImageOptions{}
+	op.GeoM.Translate(float64(object.X)-16, float64(object.Y)-16)
 
-func (player *Player) Draw() *ebiten.Image {
-	return player.Animation.Sprite
+	screen.DrawImage(player.Animation.Sprite, op)
 }
 
 func (player *Player) Update() {

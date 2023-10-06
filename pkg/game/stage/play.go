@@ -27,7 +27,12 @@ type Play struct {
 }
 
 func (world *Play) Init() {
+
+	world.Player = system.NewPlayer(world.draftExitsSystem)
+	util.OrDie(world.Player.Animation.Load(goplatformer.EmbeddedPlayerSprite))
+	// ====================================================================================
 	world.systems = system.Systems{
+		world.Player,
 		&system.UI{},
 	}
 
@@ -41,26 +46,12 @@ func (world *Play) Init() {
 	img, _ := util.Get2OrDie(image.Decode(bytes.NewReader(world.Level.Image)))
 	world.TileSet = ebiten.NewImageFromImage(img)
 
-	world.Player = system.NewPlayer(world.draftExitsSystem)
-	util.OrDie(world.Player.Animation.Load(goplatformer.EmbeddedPlayerSprite))
-
 	world.draftExitsSystem(system.ExitEast)
-
 }
 
 func (world *Play) Update() {
 	world.systems.Update()
-	//if ebiten.IsKeyPressed(ebiten.KeyTab) {
-	//	world.MAP_UI.GetWidget().Visibility = widget.Visibility_Show
-	//
-	//} else {
-	//	world.MAP_UI.GetWidget().Visibility = widget.Visibility_Hide
-	//
-	//}
-
 	world.Room.Update()
-	world.Player.Update()
-	//world.UI.Update()
 }
 
 func (world *Play) Draw(screen *ebiten.Image) {
@@ -69,13 +60,6 @@ func (world *Play) Draw(screen *ebiten.Image) {
 	screen.DrawImage(world.Room.Draw(), nil)
 	/* ===================================================== */
 
-	/* ===================================================== */
-	/* Player Sprite*/
-	player := world.Player.Object
-	op := &ebiten.DrawImageOptions{}
-	op.GeoM.Translate(float64(player.X)-16, float64(player.Y)-16)
-	screen.DrawImage(world.Player.Draw(), op)
-	/* ===================================================== */
 	//world.UI.Draw(screen)
 	world.systems.Draw(screen)
 	// ebitenutil.DebugPrint(screen, fmt.Sprintf("FPS: %f", ebiten.ActualFPS()))
@@ -84,7 +68,6 @@ func (world *Play) Draw(screen *ebiten.Image) {
 }
 
 func (world *Play) draftExitsSystem(exit system.RoomExit) {
-	//
 	switch world.currentRoomId {
 	case 0:
 		switch exit {

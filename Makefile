@@ -69,6 +69,9 @@ clean:
 all: web release-win64 release-mac-intel release-mac-arm
 .PHONY: all
 
+test:
+	$(Q)GOOS=js GOARCH=wasm go test ./... -exec="$(shell go env GOROOT)/misc/wasm/go_js_wasm_exec"
+
 web: $(WEB_DIR)/game.wasm $(WEB_DIR)/index.html $(WEB_DIR)/wasm_exec.js
 .PHONY: web
 

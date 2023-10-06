@@ -2,8 +2,8 @@ module github.com/justgook/goplatformer
 
 go 1.21
 
+
 require (
-	github.com/ebitenui/ebitenui v0.5.5
 	github.com/fatih/color v1.15.0
 	github.com/golang/freetype v0.0.0-20170609003504-e2365dfdc4a0
 	github.com/hajimehoshi/ebiten/v2 v2.6.0
@@ -16,6 +16,7 @@ require (
 
 require (
 	github.com/ebitengine/purego v0.5.0 // indirect
+	github.com/ebitenui/ebitenui v0.5.5 // indirect
 	github.com/jezek/xgb v1.1.0 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.19 // indirect

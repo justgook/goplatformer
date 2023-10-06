@@ -16,7 +16,7 @@
 # vendor/
 
 # Go workspace file
-go.work
+#go.work
 
 # Build artifacts and tools
 /tmp/
@@ -36,4 +36,3 @@ Thumbs.db
 
 /.idea
 *.iml
-
