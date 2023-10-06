@@ -179,7 +179,8 @@ if (!WebAssembly.instantiateStreaming) {
 }
 const go = new Go();
 const aaa = document.getElementById("progress")
-WebAssembly.instantiateStreaming(fetchWithProgress("game.wasm", (a) => aaa.value = a), go.importObject).then(result => {
+//WebAssembly.instantiateStreaming(fetchWithProgress("game.wasm", (a) => aaa.value = a), go.importObject).then(result => {
+WebAssembly.instantiateStreaming(fetch("game.wasm"), go.importObject).then(result => {
     go.run(result.instance);
     aaa.remove()
 });
