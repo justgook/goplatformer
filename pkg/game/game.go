@@ -1,46 +1,55 @@
 package game
 
 import (
-	"image/color"
+	"fmt"
 
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/justgook/goplatformer/pkg/game/stage"
+	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
+	"github.com/justgook/goplatformer/pkg/game/state"
 )
 
+type DeviceInfo struct {
+	ScreenWidth  int
+	ScreenHeight int
+}
+
 type Game struct {
-	Stages []stage.Stage
-	Stage  stage.Stage
-	// UI           *ui.UI1
-	CurrentWorld int
+	State      *state.GameState
+	DeviceInfo *DeviceInfo
 }
 
 func New() *Game {
-	// 640x360
-	ebiten.SetWindowSize(1280, 720)
-	ebiten.SetWindowResizingMode(ebiten.WindowResizingModeEnabled)
-	ebiten.SetWindowTitle("Game title goes here")
+	deviceInfo := &DeviceInfo{
+		ScreenWidth:  640,
+		ScreenHeight: 360,
+	}
 
-	current := &stage.Play{}
-	current.Init()
+	gameState := &state.GameState{}
+	gameState.Init(deviceInfo.ScreenWidth, deviceInfo.ScreenHeight)
+
+	gameState.SetScene(&BlackScene{})
+	gameState.SetScene(&ItroScene{})
+	// gameState.SetScene(&StartScene{})
+	// gameState.SetScene(&PlayScene{})
 
 	return &Game{
-		Stage: current,
+		State:      gameState,
+		DeviceInfo: deviceInfo,
 	}
 }
 
 func (g *Game) Layout(w, h int) (int, int) {
-	// 640x360
-	return 640, 360 //- KEEP THAT ASPECT RATIO
-	// return w >> 1, h >> 1
+	return g.DeviceInfo.ScreenWidth, g.DeviceInfo.ScreenHeight
 }
 func (g *Game) Update() error {
-	g.Stage.Update()
+	g.State.Update()
 
 	return nil
 }
 
 func (g *Game) Draw(screen *ebiten.Image) {
-	screen.Fill(color.RGBA{R: 20, G: 20, B: 40, A: 255})
-	g.Stage.Draw(screen)
+	g.State.Draw(screen)
+	ebitenutil.DebugPrint(screen, fmt.Sprintf("FPS: %f", ebiten.ActualFPS()))
+
 }
 

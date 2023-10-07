@@ -1,14 +1,14 @@
 package system
 
-import "github.com/hajimehoshi/ebiten/v2"
+import (
+	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/justgook/goplatformer/pkg/game/state"
+	"github.com/justgook/goplatformer/pkg/util"
+)
 
-type System interface {
-	Init()
-	Terminate()
-	Update()
-	Draw(screen *ebiten.Image)
-}
-type Systems []System
+var _ state.Scene = (*Systems)(nil)
+
+type Systems []state.Scene
 
 func (s Systems) Init() {
 	for i := range s {
@@ -22,10 +22,14 @@ func (s Systems) Draw(screen *ebiten.Image) {
 	}
 }
 
-func (s Systems) Update() {
+func (s Systems) Update(aa *state.GameState) error {
+	var err error
 	for i := range s {
-		s[i].Update()
+		if err = s[i].Update(aa); err != nil {
+			return util.Catch(err)
+		}
 	}
+	return nil
 }
 
 func (s Systems) Terminate() {
@@ -33,12 +37,3 @@ func (s Systems) Terminate() {
 		s[i].Terminate()
 	}
 }
-
-type RoomExit = int64
-
-const (
-	ExitNorth RoomExit = 5
-	ExitEast  RoomExit = 6
-	ExitSouth RoomExit = 7
-	ExitWest  RoomExit = 8
-)

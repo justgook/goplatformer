@@ -45,6 +45,7 @@ var (
 	panelIdle []byte
 	//go:embed asset/ui/res/titlebar-idle.png
 	titlebar []byte
+
 	//go:embed asset/ui/excel.ttf
 	font1       []byte
 	UIResources = func() *resources.UI {
@@ -54,7 +55,7 @@ var (
 		toolTipFace := util.GetOrDie(util.LoadFont(font1, 15))
 
 		return &resources.UI{
-			Panel:     util.GetOrDie(newPanelResources(panelIdle, titlebar)),
+			Panel: util.GetOrDie(newPanelResources(panelIdle, titlebar)),
 			Text: &resources.UIText{
 				IdleColor:     util.HexToColor(textIdleColor),
 				DisabledColor: util.HexToColor(textDisabledColor),
@@ -102,3 +103,4 @@ func newPanelResources(a, b []byte) (*resources.UIPanel, error) {
 		},
 	}, nil
 }
+

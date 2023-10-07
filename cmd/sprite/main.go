@@ -7,7 +7,7 @@ import (
 	"os"
 
 	"github.com/justgook/goplatformer/pkg/aseprite"
-	"github.com/justgook/goplatformer/pkg/bin"
+	"github.com/justgook/goplatformer/pkg/resources"
 	"github.com/justgook/goplatformer/pkg/gameLogger/cli"
 	"github.com/justgook/goplatformer/pkg/util"
 )
@@ -40,7 +40,7 @@ func main() {
 		panic(err)
 	}
 
-	output := bin.AnimatedSprite{
+	output := resources.AnimatedSprite{
 		Image: imageBytes,
 		Data:  convertAseprite2AnimDataMap(&data),
 	}
@@ -52,7 +52,7 @@ func main() {
 		break
 	}
 
-	toFile := util.GetOrDie(output.Save())
+	toFile := util.GetOrDie(resources.Save(output))
 	file, _ := os.Create(*outPath)
 	defer file.Close()
 	util.GetOrDie(file.Write(toFile))
@@ -61,17 +61,17 @@ func main() {
 // setup aseprite to:
 // Item File name `{layer} {frame}`
 // Item Tag Name `{tag}`
-func convertAseprite2AnimDataMap(input *aseprite.Animation) bin.AnimatedSpriteDataMap {
-	output := make(bin.AnimatedSpriteDataMap, len(input.Meta.FrameTags))
+func convertAseprite2AnimDataMap(input *aseprite.Animation) resources.AnimatedSpriteDataMap {
+	output := make(resources.AnimatedSpriteDataMap, len(input.Meta.FrameTags))
 	layerCount := len(input.Meta.Layers)
 	frameMaps := input.Frames
 	for _, anim := range input.Meta.FrameTags {
-		output[anim.Name] = make([]bin.AnimatedSpriteFrame, 0, anim.To-anim.From+1)
+		output[anim.Name] = make([]resources.AnimatedSpriteFrame, 0, anim.To-anim.From+1)
 		for i := anim.From; i <= anim.To; i++ {
-			item := bin.AnimatedSpriteFrame{Layers: make([]bin.AnimatedSpriteFrameLayer, 0, layerCount)}
+			item := resources.AnimatedSpriteFrame{Layers: make([]resources.AnimatedSpriteFrameLayer, 0, layerCount)}
 			for _, layer := range input.Meta.Layers {
 				key := fmt.Sprintf("%s %d", layer.Name, i)
-				data := bin.AnimatedSpriteFrameLayer{
+				data := resources.AnimatedSpriteFrameLayer{
 					W:  frameMaps[key].Frame.W,
 					H:  frameMaps[key].Frame.H,
 					X0: frameMaps[key].Frame.X,
@@ -90,3 +90,4 @@ func convertAseprite2AnimDataMap(input *aseprite.Animation) bin.AnimatedSpriteDa
 
 	return output
 }
+

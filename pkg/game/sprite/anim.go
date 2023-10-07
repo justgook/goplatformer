@@ -3,7 +3,7 @@ package sprite
 import (
 	"bytes"
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/justgook/goplatformer/pkg/bin"
+	bin "github.com/justgook/goplatformer/pkg/resources"
 	"github.com/justgook/goplatformer/pkg/util"
 	"image"
 	_ "image/png"
@@ -60,12 +60,12 @@ func (a *Animated) FromRaw(input *bin.AnimatedSprite) {
 
 }
 
-func (a *Animated) Load(data []byte) error {
-	delme := &bin.AnimatedSprite{}
-	if err := delme.Load(data); err != nil {
-		return err
+func (a *Animated) Load(input []byte) error {
+	target := &bin.AnimatedSprite{}
+	if err := bin.Load(input, target); err != nil {
+		return util.Catch(err)
 	}
-	a.FromRaw(delme)
+	a.FromRaw(target)
 
 	return nil
 }

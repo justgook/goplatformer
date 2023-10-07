@@ -5,14 +5,14 @@ import (
 	"log/slog"
 	"os"
 
-	"github.com/justgook/goplatformer/pkg/bin"
+	"github.com/justgook/goplatformer/pkg/resources"
 	"github.com/justgook/goplatformer/pkg/gameLogger/cli"
 	"github.com/justgook/goplatformer/pkg/ldtk/v2"
 	"github.com/justgook/goplatformer/pkg/resolv/v2"
 	"github.com/justgook/goplatformer/pkg/util"
 )
 
-type Tag = bin.TagType
+type Tag = resources.TagType
 type Object = resolv.Object[Tag]
 
 func main() {
@@ -29,8 +29,8 @@ func main() {
 	dataBytes := util.GetOrDie(os.ReadFile(*inputLevel))
 	jsonData := util.GetOrDie(ldtk.UnmarshalLdtkJSON(dataBytes))
 
-	output := &bin.Level{
-		Rooms: []*bin.Room{},
+	output := &resources.Level{
+		Rooms: []*resources.Room{},
 		Image: util.GetOrDie(os.ReadFile(*tileset)),
 	}
 
@@ -44,9 +44,9 @@ func main() {
 		for _, room := range world.Levels {
 			//slog.With("room", room.Identifier)
 			collisionFound := false
-			outputRoom := &bin.Room{
-				Layers:    [][]bin.Tile{},
-				Doors:     bin.Doors{},
+			outputRoom := &resources.Room{
+				Layers:    [][]resources.Tile{},
+				Doors:     resources.Doors{},
 				W:         int(room.PxWid),
 				H:         int(room.PxHei),
 				Collision: nil,
@@ -59,7 +59,7 @@ func main() {
 			slog.Info("------------------------------------------------------")
 
 			for _, layer := range room.LayerInstances {
-				outputLayer := []bin.Tile{}
+				outputLayer := []resources.Tile{}
 				slog.Info("working with layer",
 					"layer", layer.Identifier,
 					"IntGrid", len(layer.IntGridCSV),
@@ -82,7 +82,7 @@ func main() {
 				if len(layer.AutoLayerTiles) > 0 {
 					slog.Info("set AutoLayerTiles:", "layer", layer.Identifier, "AutoLayerTiles", len(layer.AutoLayerTiles))
 					for _, tile := range layer.AutoLayerTiles {
-						outputLayer = append(outputLayer, bin.Tile{
+						outputLayer = append(outputLayer, resources.Tile{
 							X: tile.Px[0],
 							Y: tile.Px[1],
 							T: tile.T,
@@ -101,7 +101,7 @@ func main() {
 	}
 	slog.Info("========================================================================================")
 	slog.Info("layers:!!!", "bytes", len(output.Rooms[0].Layers))
-	toFile := util.GetOrDie(output.Save())
+	toFile := util.GetOrDie(resources.Save(output))
 	file, _ := os.Create(*outPath)
 	defer file.Close()
 	util.GetOrDie(file.Write(toFile))
@@ -243,3 +243,4 @@ func intGridToCollision(input []int64, w, h, cellSize int64) []*Object {
 
 	return output
 }
+

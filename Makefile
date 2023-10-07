@@ -68,10 +68,12 @@ clean:
 
 all: web release-win64 release-mac-intel release-mac-arm
 .PHONY: all
-
+develop:
+	ls -d pkg/**/* | entr -r -s "make run"
+.PHONY: develop
 test:
 	$(Q)GOOS=js GOARCH=wasm go test ./... -exec="$(shell go env GOROOT)/misc/wasm/go_js_wasm_exec"
-
+.PHONY: test
 web: $(WEB_DIR)/game.wasm $(WEB_DIR)/index.html $(WEB_DIR)/wasm_exec.js
 .PHONY: web
 
@@ -269,3 +271,4 @@ aseprite/aseprite:
 	$(Q)$(MKDIR_P) "$(CURDIR)/aseprite"
 	$(Q)cp -R $(TMP)/aseprite/build/bin/aseprite $(TMP)/aseprite/build/bin/data "$(CURDIR)/aseprite/"
 	$(Q)rm -rf $(TMP)
+

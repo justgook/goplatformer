@@ -1,0 +1,2 @@
+ls -d pkg/**/* | entr "rm build.nosync/web/game.wasm >>/dev/null && make build.nosync/web/game.wasm" \n\
+python3 -mhttp.server 8888 --jobs 2

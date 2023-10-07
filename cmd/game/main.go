@@ -13,11 +13,16 @@ func main() {
 	handler := cli.New(os.Stderr, &cli.Options{
 		HandlerOptions: slog.HandlerOptions{Level: slog.LevelDebug},
 	})
-
 	slog.SetDefault(slog.New(handler))
+
+	// 640x360 * 2
+	ebiten.SetWindowSize(1280, 720)
+	ebiten.SetWindowResizingMode(ebiten.WindowResizingModeEnabled)
+	ebiten.SetWindowTitle("Game titlegoes here")
 
 	if err := ebiten.RunGame(game.New()); err != nil {
 		fmt.Print(err)
 		return
 	}
 }
+

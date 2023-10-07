@@ -3,12 +3,18 @@ package system
 import (
 	"math"
 
-	"github.com/hajimehoshi/ebiten/v2"
+	ebiten "github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
-	"github.com/justgook/goplatformer/pkg/bin"
+	"github.com/justgook/goplatformer"
 	"github.com/justgook/goplatformer/pkg/game/sprite"
+	"github.com/justgook/goplatformer/pkg/game/state"
 	"github.com/justgook/goplatformer/pkg/resolv/v2"
+	bin "github.com/justgook/goplatformer/pkg/resources"
+	"github.com/justgook/goplatformer/pkg/util"
+	"golang.org/x/exp/slog"
 )
+
+var _ state.Scene = (*Player)(nil)
 
 type objectType = resolv.Object[bin.TagType]
 type Player struct {
@@ -24,27 +30,7 @@ type Player struct {
 	Animation *sprite.Animated
 }
 
-func (player *Player) Init() {
-
-}
-
-func (player *Player) Terminate() {
-
-}
-
-func NewPlayer(callback func(RoomExit)) *Player {
-	p := &Player{
-		Object:          resolv.NewObject[bin.TagType](32, 128, 16, 24, 99),
-		FacingRight:     true,
-		Animation:       &sprite.Animated{},
-		HitExitCallback: callback,
-	}
-	p.Animation.SetName("Idle")
-
-	p.Object.SetShape(resolv.NewRectangle(0, 0, p.Object.W, p.Object.H))
-
-	return p
-}
+// Draw implements state.Scene.
 func (player *Player) Draw(screen *ebiten.Image) {
 	object := player.Object
 	op := &ebiten.DrawImageOptions{}
@@ -53,7 +39,28 @@ func (player *Player) Draw(screen *ebiten.Image) {
 	screen.DrawImage(player.Animation.Sprite, op)
 }
 
-func (player *Player) Update() {
+// Init implements state.Scene.
+func (p *Player) Init() {
+	p.Object = resolv.NewObject[bin.TagType](32, 128, 16, 24, 99)
+	p.Animation = &sprite.Animated{}
+	p.HitExitCallback = func(re RoomExit) {
+		slog.Info("player hit exit", "exit", re)
+	}
+
+	p.Animation.SetName("Idle")
+
+	p.Object.SetShape(resolv.NewRectangle(0, 0, p.Object.W, p.Object.H))
+
+	slog.Warn("Move player animation to safer place")
+	util.OrDie(p.Animation.Load(goplatformer.EmbeddedPlayerSprite))
+}
+
+// Terminate implements state.Scene.
+func (*Player) Terminate() {
+}
+
+// Update implements state.Scene.
+func (player *Player) Update(state *state.GameState) error {
 	solidTag := int64(1)
 	platformTag := int64(3)
 	rampTag := int64(123)
@@ -316,6 +323,8 @@ func (player *Player) Update() {
 
 	player.Object.Update() // Update the player's position in the space.
 	updatePlayerAnimation(player)
+
+	return nil
 }
 
 func updatePlayerAnimation(player *Player) {
@@ -340,5 +349,5 @@ func updatePlayerAnimation(player *Player) {
 	player.Animation.Update() // Update player animation frame
 
 	/****************************************************************************************/
-
 }
+

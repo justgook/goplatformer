@@ -15,6 +15,10 @@ type TraceError struct {
 }
 
 func Catch(err error) *TraceError {
+	if err == nil {
+		return nil
+	}
+
 	p, fn, line := getErrorContextInfo()
 
 	return &TraceError{
@@ -102,3 +106,4 @@ func getErrorContextInfo() (string, string, int) {
 
 	return pName, funcName, line
 }
+
