@@ -1,13 +1,12 @@
 package level
 
 import (
-	"image"
-
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/justgook/goplatformer/pkg/pcg"
 	"github.com/justgook/goplatformer/pkg/resolv/v2"
 	"github.com/justgook/goplatformer/pkg/resources"
 	"github.com/justgook/goplatformer/pkg/util"
+	"image"
 )
 
 type Data struct {

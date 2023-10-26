@@ -4,6 +4,7 @@ import (
 	"flag"
 	"log/slog"
 	"os"
+	"slices"
 
 	"github.com/justgook/goplatformer/pkg/gameLogger/cli"
 	"github.com/justgook/goplatformer/pkg/ldtk/v2"
@@ -66,7 +67,8 @@ func main() {
 					"attrs", room.FieldInstances,
 				),
 			)
-
+			//the 1st layer is the top-most and the last is behind.
+			slices.Reverse(room.LayerInstances)
 			for _, layer := range room.LayerInstances {
 				var outputLayer []resources.Tile
 				layerLogger := roomLogger.With(slog.Group("layer",
@@ -103,9 +105,19 @@ func main() {
 				}
 
 				if len(layer.GridTiles) > 0 {
-					layerLogger.Info("parsing GridTiles")
+					layerLogger.Info("parsing GridTiles", "GridTiles", layer.GridTiles)
+					for _, tile := range layer.GridTiles {
+						outputLayer = append(outputLayer, resources.Tile{
+							X: tile.Px[0],
+							Y: tile.Px[1],
+							T: tile.T,
+						})
+					}
 				}
-				outputRoom.Layers = append(outputRoom.Layers, outputLayer)
+
+				if len(outputLayer) > 0 {
+					outputRoom.Layers = append(outputRoom.Layers, outputLayer)
+				}
 			}
 			output.Rooms = append(output.Rooms, outputRoom)
 			output.RoomsByExits[outputRoom.Exits] = append(output.RoomsByExits[outputRoom.Exits], uint(index))

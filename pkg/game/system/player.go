@@ -63,7 +63,7 @@ func UpdatePlayer(ecs *ecs.ECS) {
 			if player.OnGround != nil {
 				player.SpeedY = -jumpSpd
 			} else if player.WallSliding != nil {
-				// WALLJUMPING
+				// WALL JUMPING
 				player.SpeedY = -jumpSpd
 
 				if player.WallSliding.X > playerObject.X {
@@ -82,7 +82,7 @@ func UpdatePlayer(ecs *ecs.ECS) {
 
 	// We handle horizontal movement separately from vertical movement. This is, conceptually, decomposing movement into two phases / axes.
 	// By decomposing movement in this manner, we can handle each case properly (i.e. stop movement horizontally separately from vertical movement, as
-	// necesseary). More can be seen on this topic over on this blog post on higherorderfun.com:
+	// necessary). More can be seen on this topic over on this blog post on higherorderfun.com:
 	// http://higherorderfun.com/blog/2012/05/20/the-guide-to-implementing-2d-platformers/
 
 	// dx is the horizontal delta movement variable (which is the Player's horizontal speed). If we come into contact with something, then it will
