@@ -56,6 +56,7 @@ func UpdatePlayer(ecs *ecs.ECS) {
 	// Check for jumping.
 	if input.Jump.JustPressed {
 		if input.S.Down &&
+			player.OnGround != nil &&
 			player.OnGround.HaveTags("platform") {
 			player.IgnorePlatform = player.OnGround
 		} else {

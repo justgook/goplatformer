@@ -42,6 +42,11 @@ jobs:
           sudo apt-get install --no-install-recommends -y \
             libx11-dev libxcursor-dev libxi-dev \
             ninja-build
+      - name: Build Aseprite
+        if: steps.cache-aseprite.outputs.cache-hit != 'true'
+        shell: bash
+        run: |
+          make aseprite/aseprite
 
       - name: Install Ebiten Linux dependencies
         if: runner.os == 'Linux'
