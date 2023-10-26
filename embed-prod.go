@@ -9,5 +9,5 @@ import (
 //go:embed build/sprite/Player.char
 var playerAnim []byte
 
-//go:embed build.nosync/level/level1.level
+//go:embed build/level/level1.level
 var embeddedLevel []byte
