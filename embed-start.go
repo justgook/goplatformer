@@ -11,8 +11,7 @@ import (
 var (
 	//go:embed asset/start/title.png
 	startMenuTitleImg []byte
-	StartMenuTitleImg  = func () *ebiten.Image {
-		return util.GetOrDie(util.LoadImage(startMenuTitleImg))
+	StartMenuTitleImg = func() *ebiten.Image {
+		return util.GetOrDie(util.ImageFromBytes(startMenuTitleImg))
 	}()
 )
-

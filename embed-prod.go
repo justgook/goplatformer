@@ -6,8 +6,8 @@ import (
 	_ "embed"
 )
 
-//go:embed build/sprite/Player.sprite
-var EmbeddedPlayerSprite []byte
+//go:embed build/sprite/Player.char
+var playerAnim []byte
 
-//go:embed build/level/level1.level
-var EmbeddedLevel []byte
+//go:embed build.nosync/level/level1.level
+var embeddedLevel []byte

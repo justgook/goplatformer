@@ -4,6 +4,7 @@ package cli
 import (
 	"context"
 	"fmt"
+	"github.com/justgook/goplatformer/pkg/util"
 	"io"
 	"log/slog"
 	"sync"
@@ -24,7 +25,7 @@ var Colors = map[slog.Level]*color.Color{
 var Strings = map[slog.Level]string{
 	slog.LevelDebug: "•",
 	slog.LevelInfo:  "•",
-	slog.LevelWarn:  "•",
+	slog.LevelWarn:  "!",
 	slog.LevelError: "⨯",
 }
 
@@ -51,7 +52,8 @@ func New(w io.Writer, opts *Options) *Handler {
 }
 
 func (h *Handler) Enabled(ctx context.Context, l slog.Level) bool {
-	minLevel := slog.LevelInfo
+	// fmt.Print("Enabled??,", l)
+	minLevel := slog.LevelDebug
 	if h.opts.Level != nil {
 		minLevel = h.opts.Level.Level()
 	}
@@ -60,7 +62,7 @@ func (h *Handler) Enabled(ctx context.Context, l slog.Level) bool {
 
 func (h *Handler) Handle(ctx context.Context, r slog.Record) error {
 	var bold = color.New(color.Bold)
-	// level time message attributes// get a buffer from the sync pool
+	// level time message attributes
 	// get a buffer from the sync pool
 	buf := gameLogger.NewBuffer()
 	defer buf.Free()
@@ -76,10 +78,19 @@ func (h *Handler) Handle(ctx context.Context, r slog.Record) error {
 	levelEmoji := Strings[r.Level]
 	padding := 4
 	coloredLevel := theColor.Sprintf("%s", bold.Sprintf("%*s", padding, levelEmoji))
-	buf.WriteString(coloredLevel)
-	buf.WriteString(" ")
-	buf.WriteString(fmt.Sprintf("%-25s", r.Message))
-	buf.WriteString("\t\t")
+	if _, err := buf.WriteString(coloredLevel); err != nil {
+		return util.Catch(err)
+	}
+	if _, err := buf.WriteString(" "); err != nil {
+		return util.Catch(err)
+	}
+	if _, err := buf.WriteString(fmt.Sprintf("%-25s", r.Message)); err != nil {
+		return util.Catch(err)
+	}
+
+	if _, err := buf.WriteString("\t\t"); err != nil {
+		return util.Catch(err)
+	}
 
 	// write handler attributes
 	if len(h.attrsPrefix) > 0 {
@@ -96,7 +107,9 @@ func (h *Handler) Handle(ctx context.Context, r slog.Record) error {
 		})
 	}
 
-	buf.WriteByte('\n')
+	if err := buf.WriteByte('\n'); err != nil {
+		return err
+	}
 
 	h.mu.Lock()
 	defer h.mu.Unlock()
@@ -109,25 +122,43 @@ func (h *Handler) Handle(ctx context.Context, r slog.Record) error {
 }
 
 func (h *Handler) appendAttr(buf *gameLogger.Buffer, attr slog.Attr, theColor *color.Color, groupsPrefix string) {
-	buf.Write([]byte(" "))
-	if groupsPrefix != "" {
-		buf.WriteString(theColor.Sprint(groupsPrefix))
+	if _, err := buf.Write([]byte(" ")); err != nil {
+		return
 	}
-	buf.WriteString(theColor.Sprint(attr.Key))
-	buf.Write([]byte("="))
+	if groupsPrefix != "" {
+		_, err := buf.WriteString(theColor.Sprint(groupsPrefix))
+		if err != nil {
+			return
+		}
+	}
+
+	if _, writeString := buf.WriteString(theColor.Sprint(attr.Key)); writeString != nil {
+		return
+	}
+
+	if _, err := buf.Write([]byte("=")); err != nil {
+		return
+	}
 
 	// needQuote := attr.Value.Kind() != slog.KindInt64
 	// if needQuote {
 	// 	buf.Write([]byte(`"`))
 	// }
 	if attr.Value.Kind() != slog.KindGroup {
-		buf.Write([]byte(attr.Value.String()))
+		if _, err := buf.Write([]byte(attr.Value.String())); err != nil {
+			return
+		}
 	} else {
-		buf.Write([]byte("{"))
+		if _, err := buf.Write([]byte("{")); err != nil {
+			return
+		}
 		for _, attr := range attr.Value.Group() {
 			h.appendAttr(buf, attr, theColor, groupsPrefix)
 		}
-		buf.Write([]byte(" }"))
+
+		if _, err := buf.Write([]byte(" }")); err != nil {
+			return
+		}
 	}
 
 	// if needQuote {
@@ -160,4 +191,4 @@ func (h *Handler) WithGroup(name string) slog.Handler {
 	return cloned
 }
 
-// var _ slog.Handler = (*Handler)(nil)
+var _ slog.Handler = (*Handler)(nil)

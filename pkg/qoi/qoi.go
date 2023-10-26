@@ -16,17 +16,19 @@ import (
 	"image"
 	"image/color"
 	"io"
+
+	"github.com/justgook/goplatformer/pkg/util"
 )
 
 const (
-	qoi_INDEX byte = 0b00_000000
-	qoi_DIFF  byte = 0b01_000000
-	qoi_LUMA  byte = 0b10_000000
-	qoi_RUN   byte = 0b11_000000
-	qoi_RGB   byte = 0b1111_1110
-	qoi_RGBA  byte = 0b1111_1111
+	qoiIndex byte = 0b00_000000
+	qoiDiff  byte = 0b01_000000
+	qoiLuma  byte = 0b10_000000
+	qoiRun   byte = 0b11_000000
+	qoiRgb   byte = 0b1111_1110
+	qoiRgba  byte = 0b1111_1111
 
-	qoi_MASK_2 byte = 0b11_000000
+	qoiMask2 byte = 0b11_000000
 )
 
 const qoiMagic = "qoif"
@@ -72,23 +74,23 @@ func Decode(r io.Reader) (image.Image, error) {
 			}
 
 			switch {
-			case b1 == qoi_RGB:
+			case b1 == qoiRgb:
 				_, err = io.ReadFull(b, px[:3])
 				if err != nil {
 					return nil, err
 				}
-			case b1 == qoi_RGBA:
+			case b1 == qoiRgba:
 				_, err = io.ReadFull(b, px[:])
 				if err != nil {
 					return nil, err
 				}
-			case b1&qoi_MASK_2 == qoi_INDEX:
+			case b1&qoiMask2 == qoiIndex:
 				px = index[b1]
-			case b1&qoi_MASK_2 == qoi_DIFF:
+			case b1&qoiMask2 == qoiDiff:
 				px[0] += ((b1 >> 4) & 0x03) - 2
 				px[1] += ((b1 >> 2) & 0x03) - 2
 				px[2] += (b1 & 0x03) - 2
-			case b1&qoi_MASK_2 == qoi_LUMA:
+			case b1&qoiMask2 == qoiLuma:
 				b2, err := b.ReadByte()
 				if err != nil {
 					return nil, err
@@ -97,7 +99,7 @@ func Decode(r io.Reader) (image.Image, error) {
 				px[0] += vg - 8 + ((b2 >> 4) & 0x0f)
 				px[1] += vg
 				px[2] += vg - 8 + (b2 & 0x0f)
-			case b1&qoi_MASK_2 == qoi_RUN:
+			case b1&qoiMask2 == qoiRun:
 				run = int(b1 & 0b00111111)
 			default:
 				px = pixel{255, 0, 255, 255} // should not happen
@@ -163,17 +165,26 @@ func Encode(w io.Writer, m image.Image) error {
 				run++
 				last_pixel := x == (maxX-1) && y == (maxY-1)
 				if run == 62 || last_pixel {
-					out.WriteByte(qoi_RUN | byte(run-1))
+					err := out.WriteByte(qoiRun | byte(run-1))
+					if err != nil {
+						return err
+					}
 					run = 0
 				}
 			} else {
 				if run > 0 {
-					out.WriteByte(qoi_RUN | byte(run-1))
+					err := out.WriteByte(qoiRun | byte(run-1))
+					if err != nil {
+						return err
+					}
 					run = 0
 				}
 				var index_pos byte = qoi_COLOR_HASH(px[0], px[1], px[2], px[3]) % 64
 				if index[index_pos] == px {
-					out.WriteByte(qoi_INDEX | index_pos)
+					err := out.WriteByte(qoiIndex | index_pos)
+					if err != nil {
+						return err
+					}
 				} else {
 					index[index_pos] = px
 
@@ -186,21 +197,44 @@ func Encode(w io.Writer, m image.Image) error {
 						vg_b := vb - vg
 
 						if vr > -3 && vr < 2 && vg > -3 && vg < 2 && vb > -3 && vb < 2 {
-							out.WriteByte(qoi_DIFF | byte((vr+2)<<4|(vg+2)<<2|(vb+2)))
+
+							if err := out.WriteByte(qoiDiff | byte((vr+2)<<4|(vg+2)<<2|(vb+2))); err != nil {
+								return util.Catch(err)
+							}
 						} else if vg_r > -9 && vg_r < 8 && vg > -33 && vg < 32 && vg_b > -9 && vg_b < 8 {
-							out.WriteByte(qoi_LUMA | byte(vg+32))
-							out.WriteByte(byte((vg_r+8)<<4) | byte(vg_b+8))
+							if err := out.WriteByte(qoiLuma | byte(vg+32)); err != nil {
+								return util.Catch(err)
+							}
+
+							if err := out.WriteByte(byte((vg_r+8)<<4) | byte(vg_b+8)); err != nil {
+								return util.Catch(err)
+							}
 						} else {
-							out.WriteByte(qoi_RGB)
-							out.WriteByte(px[0])
-							out.WriteByte(px[1])
-							out.WriteByte(px[2])
+							if err := out.WriteByte(qoiRgb); err != nil {
+								return util.Catch(err)
+							}
+
+							if err := out.WriteByte(px[0]); err != nil {
+								return util.Catch(err)
+							}
+
+							if err := out.WriteByte(px[1]); err != nil {
+								return util.Catch(err)
+							}
+
+							if err := out.WriteByte(px[2]); err != nil {
+								return util.Catch(err)
+							}
 						}
 
 					} else {
-						out.WriteByte(qoi_RGBA)
+						if err := out.WriteByte(qoiRgba); err != nil {
+							return util.Catch(err)
+						}
 						for i := 0; i < 4; i++ {
-							out.WriteByte(px[i])
+							if err := out.WriteByte(px[i]); err != nil {
+								return util.Catch(err)
+							}
 						}
 					}
 
@@ -210,8 +244,14 @@ func Encode(w io.Writer, m image.Image) error {
 			px_prev = px
 		}
 	}
-	binary.Write(out, binary.BigEndian, uint32(0)) // padding
-	binary.Write(out, binary.BigEndian, uint32(1)) // padding
+
+	if err := binary.Write(out, binary.BigEndian, uint32(0)); err != nil {
+		return util.Catch(err)
+	} // padding
+
+	if err := binary.Write(out, binary.BigEndian, uint32(1)); err != nil {
+		return util.Catch(err)
+	} // padding
 
 	return out.Flush()
 }

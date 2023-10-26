@@ -5,10 +5,10 @@ import (
 	"log/slog"
 	"os"
 
-	"github.com/justgook/goplatformer/pkg/resources"
 	"github.com/justgook/goplatformer/pkg/gameLogger/cli"
 	"github.com/justgook/goplatformer/pkg/ldtk/v2"
 	"github.com/justgook/goplatformer/pkg/resolv/v2"
+	"github.com/justgook/goplatformer/pkg/resources"
 	"github.com/justgook/goplatformer/pkg/util"
 )
 
@@ -28,59 +28,71 @@ func main() {
 
 	dataBytes := util.GetOrDie(os.ReadFile(*inputLevel))
 	jsonData := util.GetOrDie(ldtk.UnmarshalLdtkJSON(dataBytes))
+	imgBytes := util.GetOrDie(os.ReadFile(*tileset))
 
 	output := &resources.Level{
-		Rooms: []*resources.Room{},
-		Image: util.GetOrDie(os.ReadFile(*tileset)),
+		LevelData: &resources.LevelData{
+			Rooms:        []*resources.Room{},
+			RoomsByExits: map[resources.Exits][]uint{},
+		},
+		Image: util.GetOrDie(resources.BytesToImage(imgBytes)),
 	}
 
 	slog.Info("========================================================================================")
+
 	for worldI, world := range jsonData.Worlds {
 		if worldI > 0 {
 			panic("game can have only one world (for now)")
 		}
-		slog.Info("got world:", "world", world.Identifier)
+		worldLogger := slog.With(
+			slog.Group("world",
+				slog.String("name", world.Identifier),
+			),
+		)
 
-		for _, room := range world.Levels {
+		for index, room := range world.Levels {
 			//slog.With("room", room.Identifier)
 			collisionFound := false
 			outputRoom := &resources.Room{
 				Layers:    [][]resources.Tile{},
-				Doors:     resources.Doors{},
+				Exits:     0,
 				W:         int(room.PxWid),
 				H:         int(room.PxHei),
 				Collision: nil,
 			}
-
-			slog.Info("got room:",
-				"room", room.Identifier,
-				"FieldInstances", room.FieldInstances,
+			roomLogger := worldLogger.With(
+				slog.Group("room",
+					"name", room.Identifier,
+					"attrs", room.FieldInstances,
+				),
 			)
-			slog.Info("------------------------------------------------------")
 
 			for _, layer := range room.LayerInstances {
-				outputLayer := []resources.Tile{}
-				slog.Info("working with layer",
-					"layer", layer.Identifier,
-					"IntGrid", len(layer.IntGridCSV),
+				var outputLayer []resources.Tile
+				layerLogger := roomLogger.With(slog.Group("layer",
+					"name", layer.Identifier,
 					"GridSize", layer.GridSize,
-				)
+					"IntGrid", len(layer.IntGridCSV),
+					"Entities", len(layer.EntityInstances),
+					"AutoLayerTiles", len(layer.AutoLayerTiles),
+					"GridTiles", len(layer.GridTiles),
+				))
 
 				if len(layer.IntGridCSV) > 0 {
-					slog.Info("set collision:", "layer", layer.Identifier)
+					layerLogger.Info("parsing Collision")
 					if collisionFound {
 						panic("room can have only one collision room (for now)")
 					}
-					outputRoom.Collision = intGridToCollision(layer.IntGridCSV, layer.CWid, layer.CHei, layer.GridSize)
+					parseCollisionLayer(layer.IntGridCSV, layer.CWid, layer.CHei, layer.GridSize, outputRoom)
 					collisionFound = true
 				}
 
 				if len(layer.EntityInstances) > 0 {
-					slog.Info("set Entities:", "layer", layer.Identifier, "EntityInstances", len(layer.EntityInstances))
+					layerLogger.Info("parsing Entities")
 				}
 
 				if len(layer.AutoLayerTiles) > 0 {
-					slog.Info("set AutoLayerTiles:", "layer", layer.Identifier, "AutoLayerTiles", len(layer.AutoLayerTiles))
+					layerLogger.Info("parsing AutoLayerTiles")
 					for _, tile := range layer.AutoLayerTiles {
 						outputLayer = append(outputLayer, resources.Tile{
 							X: tile.Px[0],
@@ -91,16 +103,15 @@ func main() {
 				}
 
 				if len(layer.GridTiles) > 0 {
-					slog.Info("set GridTiles:", "layer", layer.Identifier, "GridTiles", len(layer.GridTiles))
+					layerLogger.Info("parsing GridTiles")
 				}
 				outputRoom.Layers = append(outputRoom.Layers, outputLayer)
-				slog.Info("----")
 			}
 			output.Rooms = append(output.Rooms, outputRoom)
+			output.RoomsByExits[outputRoom.Exits] = append(output.RoomsByExits[outputRoom.Exits], uint(index))
 		}
 	}
 	slog.Info("========================================================================================")
-	slog.Info("layers:!!!", "bytes", len(output.Rooms[0].Layers))
 	toFile := util.GetOrDie(resources.Save(output))
 	file, _ := os.Create(*outPath)
 	defer file.Close()
@@ -113,10 +124,6 @@ type Point struct {
 }
 
 func addToCache(cache map[*Object][]Point, matrix [][]*Object, obj *Object, x, y int64) {
-	//slog.Info("addToCache",
-	//	"X", x,
-	//	"Y", y,
-	//)
 	matrix[x][y] = obj
 	if cache[obj] == nil {
 		cache[obj] = []Point{}
@@ -132,12 +139,13 @@ func updateCache(cache map[*Object][]Point, matrix [][]*Object, was, now *Object
 	delete(cache, was)
 }
 
-func intGridToCollision(input []int64, w, h, cellSize int64) []*Object {
-	slog.Info("intGridToCollision",
+func parseCollisionLayer(input []int64, w, h, cellSize int64, target *resources.Room) {
+	slog.Info("parseCollisionLayer",
 		"w", w,
 		"h", h,
 		"cellSize", cellSize,
 	)
+
 	tmp := make([][]*Object, w)
 	for i := range tmp {
 		tmp[i] = make([]*Object, h)
@@ -185,6 +193,7 @@ func intGridToCollision(input []int64, w, h, cellSize int64) []*Object {
 
 		return false
 	}
+
 	for i, tag := range input {
 		if tag == 0 {
 			continue
@@ -193,7 +202,7 @@ func intGridToCollision(input []int64, w, h, cellSize int64) []*Object {
 		y := int64(i) / w
 		x := int64(i) % w
 		if x >= int64(len(tmp)) {
-			slog.Info("intGridToCollision:out of bounds(X)",
+			slog.Info("parseCollisionLayer:out of bounds(X)",
 				"size", len(tmp),
 				"X", x,
 				"Y", y,
@@ -201,7 +210,7 @@ func intGridToCollision(input []int64, w, h, cellSize int64) []*Object {
 			continue
 		}
 		if y >= int64(len(tmp[x])) {
-			slog.Info("intGridToCollision:out of bounds(Y)",
+			slog.Info("parseCollisionLayer:out of bounds(Y)",
 				"size", len(tmp[x]),
 				"X", x,
 				"Y", y,
@@ -223,11 +232,18 @@ func intGridToCollision(input []int64, w, h, cellSize int64) []*Object {
 		b := mergeLeft(x, y, tag)
 		if !a && b {
 			mergeUp(x, y, tag)
-
+		}
+		switch tag {
+		case resources.CollisionTagExitNorth:
+			target.Exits = target.Exits.Set(resources.ExitN)
+		case resources.CollisionTagExitEast:
+			target.Exits = target.Exits.Set(resources.ExitE)
+		case resources.CollisionTagExitSouth:
+			target.Exits = target.Exits.Set(resources.ExitS)
+		case resources.CollisionTagExitWest:
+			target.Exits = target.Exits.Set(resources.ExitW)
 		}
 	}
-
-	var output []*Object
 
 	added := make(map[*Object]bool)
 
@@ -236,11 +252,9 @@ func intGridToCollision(input []int64, w, h, cellSize int64) []*Object {
 			if b == nil || added[b] {
 				continue
 			}
-			output = append(output, b)
+
+			target.Collision = append(target.Collision, b)
 			added[b] = true
 		}
 	}
-
-	return output
 }
-

@@ -1,10 +1,22 @@
 package resources
 
+import (
+	"image"
+	"time"
+)
+
 type AnimatedSprite struct {
 	Image []byte
 	W     int
 	H     int
-	Data  AnimatedSpriteDataMap
+	Tags  []string
+	Anim  map[string]AnimatedSpriteAnimData
+
+	Data AnimatedSpriteDataMap
+}
+type AnimatedSpriteAnimData struct {
+	Frames    []*image.Rectangle
+	Durations []time.Duration
 }
 
 type AnimatedSpriteDataMap = map[string][]AnimatedSpriteFrame
@@ -24,3 +36,7 @@ type AnimatedSpriteFrameLayer struct {
 	Y1 int
 }
 
+func (a *AnimatedSprite) SpriteSheet() error {
+
+	return nil
+}

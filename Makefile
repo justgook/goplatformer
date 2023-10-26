@@ -42,9 +42,14 @@ SRC_SPRITE = $(wildcard $(ASSET_DIR)/*.sprite.aseprite)
 SRC_SPRITE += $(wildcard $(ASSET_DIR)/*/*.sprite.aseprite)
 SRC_SPRITE += $(wildcard $(ASSET_DIR)/*/*/*.sprite.aseprite)
 
+SRC_CHAR = $(wildcard $(ASSET_DIR)/*.char.aseprite)
+SRC_CHAR += $(wildcard $(ASSET_DIR)/*/*.char.aseprite)
+SRC_CHAR += $(wildcard $(ASSET_DIR)/*/*/*.char.aseprite)
+
 RESOURCES := $(SRC_LEVEL:.ldtk=.level)
 RESOURCES += $(SRC_TILESET:.tileset.aseprite=.tileset.png)
 RESOURCES += $(SRC_SPRITE:.sprite.aseprite=.sprite)
+RESOURCES += $(SRC_CHAR:.char.aseprite=.char)
 RESOURCES := $(subst $(ASSET_DIR),$(BUILD_DIR),$(RESOURCES))
 
 APP_DIR := ./cmd/game
@@ -59,21 +64,22 @@ endif
 
 LDFLAGS := -s -w
 
-
-
 clean:
-	$(Q)git clean -xdf
+	$(Q)git ls-files -o | xargs trash
 	$(Q)rm -rf $(BUILD_DIR)
 .PHONY: clean
 
 all: web release-win64 release-mac-intel release-mac-arm
 .PHONY: all
+
 develop:
 	ls -d pkg/**/* | entr -r -s "make run"
 .PHONY: develop
+
 test:
 	$(Q)GOOS=js GOARCH=wasm go test ./... -exec="$(shell go env GOROOT)/misc/wasm/go_js_wasm_exec"
 .PHONY: test
+
 web: $(WEB_DIR)/game.wasm $(WEB_DIR)/index.html $(WEB_DIR)/wasm_exec.js
 .PHONY: web
 
@@ -108,7 +114,6 @@ update:
 	$(Q)go get -u ./...
 	$(Q)go mod tidy
 .PHONY: update
-
 
 
 $(BIN_WIN64_DIR)/game.exe: export GOOS=windows
@@ -228,6 +233,16 @@ $(BUILD_DIR)/%.sprite: $(BUILD_DIR)/%.sprite.png $(BUILD_DIR)/%.sprite.json
 		--data $(BUILD_DIR)/$*.sprite.json \
 		--sprite $(BUILD_DIR)/$*.sprite.png
 
+$(BUILD_DIR)/%.char: export GOOS=$(SYS_GOOS)
+$(BUILD_DIR)/%.char: export GOARCH=$(SYS_GOARCH)
+$(BUILD_DIR)/%.char: $(BUILD_DIR)/%.char.png $(BUILD_DIR)/%.char.json
+	$(Q)echo ... building $@ from $<
+	$(Q)$(MKDIR_P) $(dir $@)
+	$(Q)go run ./cmd/char \
+		-o $@ \
+		--data $(BUILD_DIR)/$*.char.json \
+		--sprite $(BUILD_DIR)/$*.char.png
+
 $(BUILD_DIR)/%.tileset.png: $(ASSET_DIR)/%.tileset.aseprite $(ASEPRITE)
 	$(Q)echo ... building $@ from $<
 	$(Q)$(MKDIR_P) $(dir $@)
@@ -257,6 +272,22 @@ $(BUILD_DIR)/%.sprite.png $(BUILD_DIR)/%.sprite.json &: $(ASSET_DIR)/%.sprite.as
 		--list-tags \
 		$<
 
+$(BUILD_DIR)/%.char.png $(BUILD_DIR)/%.char.json &: $(ASSET_DIR)/%.char.aseprite $(ASEPRITE)
+	$(Q)echo ... building $@ from $<
+	$(Q)$(MKDIR_P) $(dir $@)
+	$(Q)$(ASEPRITE) -b \
+		--data $(BUILD_DIR)/$*.char.json \
+		--format json-hash \
+		--filename-format '{tag} {frame}' \
+		--sheet $(BUILD_DIR)/$*.char.png \
+		--sheet-type packed \
+		--ignore-empty \
+		--merge-duplicates \
+		--extrude \
+		--tagname-format {tag} \
+		--list-tags \
+		$<
+
 aseprite/aseprite:
 	$(Q)$(eval TMP := $(shell mktemp -d))
 	$(Q)git clone --recursive https://github.com/aseprite/aseprite.git $(TMP)/aseprite
@@ -271,4 +302,3 @@ aseprite/aseprite:
 	$(Q)$(MKDIR_P) "$(CURDIR)/aseprite"
 	$(Q)cp -R $(TMP)/aseprite/build/bin/aseprite $(TMP)/aseprite/build/bin/data "$(CURDIR)/aseprite/"
 	$(Q)rm -rf $(TMP)
-

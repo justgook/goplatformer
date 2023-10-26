@@ -15,7 +15,7 @@ func (*CreditsScene) Draw(screen *ebiten.Image) {
 }
 
 // Init implements Scene.
-func (*CreditsScene) Init() {
+func (*CreditsScene) Init(st *state.GameState) {
 }
 
 // Terminate implements Scene.
@@ -26,4 +26,3 @@ func (*CreditsScene) Terminate() {
 func (*CreditsScene) Update(state *state.GameState) error {
 	return nil
 }
-

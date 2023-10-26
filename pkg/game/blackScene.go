@@ -18,7 +18,7 @@ func (*BlackScene) Draw(screen *ebiten.Image) {
 }
 
 // Init implements Scene.
-func (*BlackScene) Init() {
+func (*BlackScene) Init(st *state.GameState) {
 }
 
 // Terminate implements Scene.
@@ -29,4 +29,3 @@ func (*BlackScene) Terminate() {
 func (*BlackScene) Update(state *state.GameState) error {
 	return nil
 }
-

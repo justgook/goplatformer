@@ -2,6 +2,7 @@ package game
 
 import (
 	"image/color"
+	"log/slog"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/justgook/goplatformer"
@@ -22,6 +23,7 @@ func (s *StartScene) Draw(screen *ebiten.Image) {
 	if (s.tick/20)%2 > 0 {
 		content = "> " + content + " <"
 	}
+	slog.Warn("game.StartScene.Draw: update text to new ui")
 	goplatformer.DrawTextWithShadowCenter(
 		screen,
 		content,
@@ -44,7 +46,7 @@ func (s *StartScene) drawTitle(screen *ebiten.Image) {
 }
 
 // Init implements Scene.
-func (s *StartScene) Init() {
+func (s *StartScene) Init(st *state.GameState) {
 }
 
 // Terminate implements Scene.
@@ -59,4 +61,3 @@ func (s *StartScene) Update(state *state.GameState) error {
 	s.tick++
 	return nil
 }
-

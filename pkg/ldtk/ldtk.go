@@ -9,7 +9,7 @@ import (
 	"errors"
 	"image"
 	"image/color"
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"strconv"
 	// TODO remove gjson
@@ -406,7 +406,7 @@ func Open(filepath string) (*Project, error) {
 	var bytes []byte
 	var err error
 
-	bytes, err = ioutil.ReadFile(filepath)
+	bytes, err = os.ReadFile(filepath)
 
 	if err == nil {
 		project, err = Read(bytes)
@@ -438,9 +438,10 @@ func Read(data []byte) (*Project, error) {
 	}
 
 	for _, tilesetDef := range gjson.Get(dataStr, `defs.tilesets`).Array() {
-
 		newTS := &Tileset{CustomData: map[int]string{}, Enums: map[int]EnumSet{}}
-		json.Unmarshal([]byte(tilesetDef.Raw), newTS)
+		if err2 := json.Unmarshal([]byte(tilesetDef.Raw), newTS); err2 != nil {
+			return nil, err2
+		}
 		newTS.Path = filepath.FromSlash(newTS.Path)
 		project.Tilesets = append(project.Tilesets, newTS)
 

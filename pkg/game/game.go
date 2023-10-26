@@ -1,55 +1,47 @@
 package game
 
 import (
-	"fmt"
+	"log/slog"
 
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/justgook/goplatformer/pkg/game/state"
 )
 
-type DeviceInfo struct {
-	ScreenWidth  int
-	ScreenHeight int
-}
-
 type Game struct {
-	State      *state.GameState
-	DeviceInfo *DeviceInfo
+	State *state.GameState
 }
 
 func New() *Game {
-	deviceInfo := &DeviceInfo{
+	deviceInfo := &state.DeviceInfo{
 		ScreenWidth:  640,
 		ScreenHeight: 360,
 	}
 
-	gameState := &state.GameState{}
-	gameState.Init(deviceInfo.ScreenWidth, deviceInfo.ScreenHeight)
+	gameState := &state.GameState{
+		DeviceInfo: deviceInfo,
+	}
+	slog.Info("Update seed to random")
+	gameState.Init(deviceInfo.ScreenWidth, deviceInfo.ScreenHeight, 1)
 
 	gameState.SetScene(&BlackScene{})
-	gameState.SetScene(&ItroScene{})
-	// gameState.SetScene(&StartScene{})
-	// gameState.SetScene(&PlayScene{})
+	gameState.SetScene(&IntroScene{})
+
+	gameState.SetScene(&PlayScene{})
 
 	return &Game{
-		State:      gameState,
-		DeviceInfo: deviceInfo,
+		State: gameState,
 	}
 }
 
 func (g *Game) Layout(w, h int) (int, int) {
-	return g.DeviceInfo.ScreenWidth, g.DeviceInfo.ScreenHeight
+	return g.State.DeviceInfo.ScreenWidth, g.State.DeviceInfo.ScreenHeight
 }
 func (g *Game) Update() error {
-	g.State.Update()
-
-	return nil
+	return g.State.Update()
 }
 
 func (g *Game) Draw(screen *ebiten.Image) {
 	g.State.Draw(screen)
-	ebitenutil.DebugPrint(screen, fmt.Sprintf("FPS: %f", ebiten.ActualFPS()))
+	//ebitenutil.DebugPrint(screen, fmt.Sprintf("FPS: %f", ebiten.ActualFPS()))
 
 }
-

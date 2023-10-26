@@ -9,14 +9,14 @@ import (
 	"github.com/justgook/goplatformer/pkg/game/state"
 )
 
-var _ state.Scene = (*ItroScene)(nil)
+var _ state.Scene = (*IntroScene)(nil)
 
-type ItroScene struct {
+type IntroScene struct {
 	startTime time.Time
 }
 
 // Draw implements Scene.
-func (*ItroScene) Draw(screen *ebiten.Image) {
+func (*IntroScene) Draw(screen *ebiten.Image) {
 	img := goplatformer.IntroLogo0x069
 	screen.Fill(color.RGBA{R: 5, G: 23, B: 38, A: 255})
 	op := &ebiten.DrawImageOptions{}
@@ -27,19 +27,18 @@ func (*ItroScene) Draw(screen *ebiten.Image) {
 }
 
 // Init implements Scene.
-func (s *ItroScene) Init() {
+func (s *IntroScene) Init(st *state.GameState) {
 	s.startTime = time.Now()
 }
 
 // Terminate implements Scene.
-func (s *ItroScene) Terminate() {
+func (s *IntroScene) Terminate() {
 }
 
 // Update implements Scene.
-func (s *ItroScene) Update(state *state.GameState) error {
+func (s *IntroScene) Update(state *state.GameState) error {
 	if time.Since(s.startTime).Seconds() > 2 {
 		state.SetScene(&StartScene{})
 	}
 	return nil
 }
-

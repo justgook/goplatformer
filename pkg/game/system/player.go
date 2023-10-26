@@ -3,70 +3,16 @@ package system
 import (
 	"math"
 
-	ebiten "github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/inpututil"
-	"github.com/justgook/goplatformer"
-	"github.com/justgook/goplatformer/pkg/game/sprite"
-	"github.com/justgook/goplatformer/pkg/game/state"
-	"github.com/justgook/goplatformer/pkg/resolv/v2"
-	bin "github.com/justgook/goplatformer/pkg/resources"
-	"github.com/justgook/goplatformer/pkg/util"
-	"golang.org/x/exp/slog"
+	"github.com/justgook/goplatformer/pkg/game/components"
+	"github.com/yohamta/donburi/ecs"
 )
 
-var _ state.Scene = (*Player)(nil)
-
-type objectType = resolv.Object[bin.TagType]
-type Player struct {
-	Object          *objectType
-	SpeedX          float64
-	SpeedY          float64
-	OnGround        *objectType
-	WallSliding     *objectType
-	FacingRight     bool
-	IgnorePlatform  *objectType
-	HitExitCallback func(RoomExit)
-	// New Stuff
-	Animation *sprite.Animated
-}
-
-// Draw implements state.Scene.
-func (player *Player) Draw(screen *ebiten.Image) {
-	object := player.Object
-	op := &ebiten.DrawImageOptions{}
-	op.GeoM.Translate(float64(object.X)-16, float64(object.Y)-16)
-
-	screen.DrawImage(player.Animation.Sprite, op)
-}
-
-// Init implements state.Scene.
-func (p *Player) Init() {
-	p.Object = resolv.NewObject[bin.TagType](32, 128, 16, 24, 99)
-	p.Animation = &sprite.Animated{}
-	p.HitExitCallback = func(re RoomExit) {
-		slog.Info("player hit exit", "exit", re)
-	}
-
-	p.Animation.SetName("Idle")
-
-	p.Object.SetShape(resolv.NewRectangle(0, 0, p.Object.W, p.Object.H))
-
-	slog.Warn("Move player animation to safer place")
-	util.OrDie(p.Animation.Load(goplatformer.EmbeddedPlayerSprite))
-}
-
-// Terminate implements state.Scene.
-func (*Player) Terminate() {
-}
-
-// Update implements state.Scene.
-func (player *Player) Update(state *state.GameState) error {
-	solidTag := int64(1)
-	platformTag := int64(3)
-	rampTag := int64(123)
-	exits := []RoomExit{ExitNorth, ExitEast, ExitSouth, ExitWest}
-
-	// Now we update the Player's movement. This is the real bread-an-butter of this example, naturally.
+func UpdatePlayer(ecs *ecs.ECS) {
+	// Now we update the Player's movement. This is the real bread-and-butter of this example, naturally.
+	playerEntry, _ := components.Player.First(ecs.World)
+	player := components.Player.Get(playerEntry)
+	playerObject := components.Object.Get(playerEntry)
+	input := components.Input.Get(playerEntry)
 
 	friction := 0.5
 	accel := 0.5 + friction
@@ -75,19 +21,18 @@ func (player *Player) Update(state *state.GameState) error {
 	gravity := 0.75
 
 	player.SpeedY += gravity
-
 	if player.WallSliding != nil && player.SpeedY > 1 {
 		player.SpeedY = 1
 	}
 
-	// Horizontal movement is only possible when not wall sliding.
+	// Horizontal movement is only possible when not wallsliding.
 	if player.WallSliding == nil {
-		if ebiten.IsKeyPressed(ebiten.KeyRight) || ebiten.GamepadAxisValue(0, 0) > 0.1 {
+		if input.E.Down {
 			player.SpeedX += accel
 			player.FacingRight = true
 		}
 
-		if ebiten.IsKeyPressed(ebiten.KeyLeft) || ebiten.GamepadAxisValue(0, 0) < -0.1 {
+		if input.W.Down {
 			player.SpeedX -= accel
 			player.FacingRight = false
 		}
@@ -109,36 +54,34 @@ func (player *Player) Update(state *state.GameState) error {
 	}
 
 	// Check for jumping.
-	jumpKeyJustPressed := inpututil.IsKeyJustPressed(ebiten.KeyX) ||
-		inpututil.IsKeyJustPressed(ebiten.KeySpace) ||
-		ebiten.IsGamepadButtonPressed(0, 0) ||
-		ebiten.IsGamepadButtonPressed(1, 0)
-
-	if jumpKeyJustPressed {
-		if (ebiten.IsKeyPressed(ebiten.KeyDown) || ebiten.GamepadAxisValue(0, 1) > 0.1 || ebiten.GamepadAxisValue(1, 1) > 0.1) &&
-			player.OnGround != nil && player.OnGround.HaveTags(platformTag) {
+	if input.Jump.JustPressed {
+		if input.S.Down &&
+			player.OnGround.HaveTags("platform") {
 			player.IgnorePlatform = player.OnGround
 		} else {
 			if player.OnGround != nil {
 				player.SpeedY = -jumpSpd
 			} else if player.WallSliding != nil {
-				// WALL JUMPING
+				// WALLJUMPING
 				player.SpeedY = -jumpSpd
 
-				if player.WallSliding.X > player.Object.X {
+				if player.WallSliding.X > playerObject.X {
 					player.SpeedX = -4
 				} else {
 					player.SpeedX = 4
 				}
 
 				player.WallSliding = nil
+
 			}
+
 		}
+
 	}
 
 	// We handle horizontal movement separately from vertical movement. This is, conceptually, decomposing movement into two phases / axes.
 	// By decomposing movement in this manner, we can handle each case properly (i.e. stop movement horizontally separately from vertical movement, as
-	// necessary). More can be seen on this topic over on this blog post on:
+	// necesseary). More can be seen on this topic over on this blog post on higherorderfun.com:
 	// http://higherorderfun.com/blog/2012/05/20/the-guide-to-implementing-2d-platformers/
 
 	// dx is the horizontal delta movement variable (which is the Player's horizontal speed). If we come into contact with something, then it will
@@ -148,7 +91,7 @@ func (player *Player) Update(state *state.GameState) error {
 	// Moving horizontally is done fairly simply; we just check to see if something solid is in front of us. If so, we move into contact with it
 	// and stop horizontal movement speed. If not, then we can just move forward.
 
-	if check := player.Object.Check(player.SpeedX, 0, solidTag); check != nil {
+	if check := playerObject.Check(player.SpeedX, 0, "solid"); check != nil {
 
 		dx = check.ContactWithCell(check.Cells[0]).X()
 		player.SpeedX = 0
@@ -161,7 +104,7 @@ func (player *Player) Update(state *state.GameState) error {
 	}
 
 	// Then we just apply the horizontal movement to the Player's Object. Easy-peasy.
-	player.Object.X += dx
+	playerObject.X += dx
 
 	// Now for the vertical movement; it's the most complicated because we can land on different types of objects and need
 	// to treat them all differently, but overall, it's not bad.
@@ -186,25 +129,20 @@ func (player *Player) Update(state *state.GameState) error {
 		checkDistance++
 	}
 
-	/// Magic of exits
-	if check := player.Object.Check(0, checkDistance, exits...); check != nil {
-
-		player.HitExitCallback(check.Objects[0].Tags[0])
-	}
-
 	// We check for any solid / stand-able objects. In actuality, there aren't any other Objects
 	// with other tags in this Space, so we don't -have- to specify any tags, but it's good to be specific for clarity in this example.
-	if check := player.Object.Check(0, checkDistance, solidTag, platformTag, rampTag); check != nil {
+	if check := playerObject.Check(0, checkDistance, "solid", "platform", "ramp"); check != nil {
+
 		// So! Firstly, we want to see if we jumped up into something that we can slide around horizontally to avoid bumping the Player's head.
 
-		// Sliding around a misplaced jump is a small thing that makes jumping a bit more forgiving, and is something different polished platformers
-		// (like the 2D Mario games) do to make it a more comfortable to play. For a visual example of this, see this excellent devlog post
+		// Sliding around a misspaced jump is a small thing that makes jumping a bit more forgiving, and is something different polished platformers
+		// (like the 2D Mario games) do to make it a smidge more comfortable to play. For a visual example of this, see this excellent devlog post
 		// from the extremely impressive indie game, Leilani's Island: https://forums.tigsource.com/index.php?topic=46289.msg1387138#msg1387138
 
 		// To accomplish this sliding, we simply call Collision.SlideAgainstCell() to see if we can slide.
 		// We pass the first cell, and tags that we want to avoid when sliding (i.e. we don't want to slide into cells that contain other solid objects).
 
-		slide := check.SlideAgainstCell(check.Cells[0], solidTag)
+		slide := check.SlideAgainstCell(check.Cells[0], "solid")
 
 		// We further ensure that we only slide if:
 		// 1) We're jumping up into something (dy < 0),
@@ -213,10 +151,10 @@ func (player *Player) Update(state *state.GameState) error {
 		// 4) If the proposed slide is less than 8 pixels in horizontal distance. (This is a relatively arbitrary number that just so happens to be half the
 		// width of a cell. This is to ensure the player doesn't slide too far horizontally.)
 
-		if dy < 0 && check.Cells[0].ContainsTags(solidTag) && slide != nil && math.Abs(slide.X()) <= 8 {
+		if dy < 0 && check.Cells[0].ContainsTags("solid") && slide != nil && math.Abs(slide.X()) <= 8 {
 
 			// If we are able to slide here, we do so. No contact was made, and vertical speed (dy) is maintained upwards.
-			player.Object.X += slide.X()
+			playerObject.X += slide.X()
 
 		} else {
 
@@ -229,7 +167,7 @@ func (player *Player) Update(state *state.GameState) error {
 
 			// We get the ramp by simply filtering out Objects with the "ramp" tag out of the objects returned in our broad Check(), and grabbing the first one
 			// if there's any at all.
-			if ramps := check.ObjectsByTags(rampTag); len(ramps) > 0 {
+			if ramps := check.ObjectsByTags("ramp"); len(ramps) > 0 {
 
 				ramp := ramps[0]
 
@@ -246,7 +184,8 @@ func (player *Player) Update(state *state.GameState) error {
 				// move faster than you can fall in this example). This way we can maintain contact so you can always jump while running down a ramp. We only
 				// continue with coming into contact with the ramp as long as you're not moving upwards (i.e. jumping).
 
-				if contactSet := player.Object.Shape.Intersection(dx, 8, ramp.Shape); dy >= 0 && contactSet != nil {
+				if contactSet := playerObject.Shape.Intersection(dx, 8, ramp.Shape); dy >= 0 && contactSet != nil {
+
 					// If Intersection() is successful, a ContactSet is returned. A ContactSet contains information regarding where
 					// two Shapes intersect, like the individual points of contact, the center of the contacts, and the MTV, or
 					// Minimum Translation Vector, to move out of contact.
@@ -254,11 +193,12 @@ func (player *Player) Update(state *state.GameState) error {
 					// Here, we use ContactSet.TopmostPoint() to get the top-most contact point as an indicator of where
 					// we want the player's feet to be. Then we just set that position, and we're done.
 
-					dy = contactSet.TopmostPoint()[1] - player.Object.Bottom() + 0.1
+					dy = contactSet.TopmostPoint()[1] - playerObject.Bottom() + 0.1
 					player.OnGround = ramp
 					player.SpeedY = 0
 
 				}
+
 			}
 
 			// Platforms are next; here, we just see if the platform is not being ignored by attempting to drop down,
@@ -269,10 +209,11 @@ func (player *Player) Update(state *state.GameState) error {
 			// with the top of the platform object. An alternative would be to use Collision.ContactWithCell(), but that would be only if the
 			// platform didn't move and were aligned with the Spatial cellular grid.
 
-			if platforms := check.ObjectsByTags(platformTag); len(platforms) > 0 {
+			if platforms := check.ObjectsByTags("platform"); len(platforms) > 0 {
+
 				platform := platforms[0]
 
-				if platform != player.IgnorePlatform && player.SpeedY >= 0 && player.Object.Bottom() < platform.Y+4 {
+				if platform != player.IgnorePlatform && player.SpeedY >= 0 && playerObject.Bottom() < platform.Y+4 {
 					dy = check.ContactWithObject(platform).Y()
 					player.OnGround = platform
 					player.SpeedY = 0
@@ -288,19 +229,19 @@ func (player *Player) Update(state *state.GameState) error {
 			// We use ContactWithObject() here because otherwise, we might come into contact with the moving platform's cells (which, naturally,
 			// would be selected by a Collision.ContactWithCell() call because the cell is closest to the Player).
 
-			if solids := check.ObjectsByTags(solidTag); len(solids) > 0 && (player.OnGround == nil || player.OnGround.Y >= solids[0].Y) {
+			if solids := check.ObjectsByTags("solid"); len(solids) > 0 && (player.OnGround == nil || player.OnGround.Y >= solids[0].Y) {
 				dy = check.ContactWithObject(solids[0]).Y()
 				player.SpeedY = 0
 
 				// We're only on the ground if we land on it (if the object's Y is greater than the player's).
-				if solids[0].Y > player.Object.Y {
+				if solids[0].Y > playerObject.Y {
 					player.OnGround = solids[0]
 				}
 
 			}
 
 			if player.OnGround != nil {
-				player.WallSliding = nil    // Player's on the ground, so no wall sliding anymore.
+				player.WallSliding = nil    // Player's on the ground, so no wallsliding anymore.
 				player.IgnorePlatform = nil // Player's on the ground, so reset which platform is being ignored.
 			}
 
@@ -309,7 +250,7 @@ func (player *Player) Update(state *state.GameState) error {
 	}
 
 	// Move the object on dy.
-	player.Object.Y += dy
+	playerObject.Y += dy
 
 	wallNext := 1.0
 	if !player.FacingRight {
@@ -317,37 +258,29 @@ func (player *Player) Update(state *state.GameState) error {
 	}
 
 	// If the wall next to the Player runs out, stop wall sliding.
-	if c := player.Object.Check(wallNext, 0, solidTag); player.WallSliding != nil && c == nil {
+	if c := playerObject.Check(wallNext, 0, "solid"); player.WallSliding != nil && c == nil {
 		player.WallSliding = nil
 	}
 
-	player.Object.Update() // Update the player's position in the space.
-	updatePlayerAnimation(player)
-
-	return nil
+	updatePlayerAnimation(player, components.CharAnim.Get(playerEntry))
 }
 
-func updatePlayerAnimation(player *Player) {
-	/****************************player animation************************************************************/
+func updatePlayerAnimation(player *components.PlayerData, anim *components.CharacterData) {
 	if player.WallSliding != nil {
-		player.Animation.SetName("wSlideLow")
+		anim.Current = anim.WallSlideLow
 	} else if player.OnGround == nil {
 		if player.SpeedY > 2 {
-			player.Animation.SetName("Fall")
+			anim.Current = anim.Fall
 		} else if player.SpeedY < -2 {
-			player.Animation.SetName("JumpUp")
+			anim.Current = anim.JumpUp
 		} else {
-			player.Animation.SetName("JumpMax")
+			anim.Current = anim.JumpMax
 		}
 	} else if player.SpeedX != 0 {
-		player.Animation.SetName("Run")
+
+		anim.Current = anim.Run
 	} else {
-		player.Animation.SetName("Idle")
+		anim.Current = anim.Idle
 	}
-
-	player.Animation.FlipH = !player.FacingRight
-	player.Animation.Update() // Update player animation frame
-
-	/****************************************************************************************/
+	anim.Current.Sprite().SetFlipH(!player.FacingRight)
 }
-

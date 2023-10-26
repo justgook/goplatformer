@@ -1,10 +1,11 @@
 package state
 
 import (
-	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/inpututil"
 )
 
+// InputState TODO update to https://github.com/quasilyte/ebitengine-input ???
 type InputState struct {
 	Down        bool
 	JustPressed bool
@@ -34,10 +35,13 @@ func (i *InputManager) Init() {
 func (i *InputManager) Update() {
 	i.E.Down = ebiten.IsKeyPressed(ebiten.KeyRight) ||
 		ebiten.GamepadAxisValue(0, 0) > 0.1
+
+	i.W.Down = ebiten.IsKeyPressed(ebiten.KeyLeft) ||
+		ebiten.GamepadAxisValue(0, 0) < -0.1
+
 	i.S.Down = ebiten.IsKeyPressed(ebiten.KeyDown) ||
 		ebiten.GamepadAxisValue(0, 1) > 0.1
-	i.S.Down = ebiten.IsKeyPressed(ebiten.KeyLeft) ||
-		ebiten.GamepadAxisValue(0, 0) < -0.1
+
 	i.Jump.Down = ebiten.IsKeyPressed(ebiten.KeyX) ||
 		ebiten.IsKeyPressed(ebiten.KeySpace) ||
 		ebiten.IsGamepadButtonPressed(0, 0)
