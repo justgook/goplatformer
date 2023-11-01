@@ -11,7 +11,7 @@ require (
 	github.com/stretchr/testify v1.8.4
 	github.com/tanema/gween v0.0.0-20221212145351-621cc8a459d1
 	github.com/tidwall/gjson v1.17.0
-	github.com/yohamta/donburi v1.3.9
+	github.com/yohamta/donburi v1.3.10
 	golang.org/x/exp v0.0.0-20231006140011-7918f672742d
 	golang.org/x/image v0.13.0
 )
