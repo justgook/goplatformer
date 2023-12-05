@@ -1,6 +1,7 @@
 package renderer
 
 import (
+	"github.com/justgook/goplatformer/pkg/core/domain"
 	"image/color"
 
 	"github.com/hajimehoshi/ebiten/v2"
@@ -15,7 +16,7 @@ func Wall(ecs *ecs.ECS, screen *ebiten.Image) {
 	drawColor := color.RGBA{R: 60, G: 60, B: 60, A: 255}
 
 	for _, obj := range space.Objects() {
-		if obj.HaveTags("solid") {
+		if obj.HaveTags(domain.ObjectTagSolid) {
 			vector.DrawFilledRect(screen, float32(obj.X), float32(obj.Y), float32(obj.W), float32(obj.H), drawColor, false)
 		}
 	}

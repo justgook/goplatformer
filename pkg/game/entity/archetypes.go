@@ -1,7 +1,7 @@
 package entity
 
 import (
-	components2 "github.com/justgook/goplatformer/pkg/game/components"
+	"github.com/justgook/goplatformer/pkg/game/components"
 	"github.com/justgook/goplatformer/pkg/game/layers"
 	"github.com/justgook/goplatformer/pkg/game/tags"
 	"github.com/yohamta/donburi"
@@ -11,30 +11,30 @@ import (
 var (
 	Platform = newArchetype(
 		tags.Platform,
-		components2.Object,
+		components.Object,
 	)
 	FloatingPlatform = newArchetype(
 		tags.FloatingPlatform,
-		components2.Object,
-		components2.Tween,
+		components.Object,
+		components.Tween,
 	)
 	Player = newArchetype(
 		tags.Player,
-		components2.Input,
-		components2.CharAnim,
-		components2.Player,
-		components2.Object,
+		components.Input,
+		components.CharAnim,
+		components.Player,
+		components.Object,
 	)
 	Ramp = newArchetype(
 		tags.Ramp,
-		components2.Object,
+		components.Object,
 	)
 	Space = newArchetype(
-		components2.Space,
+		components.Space,
 	)
 	Wall = newArchetype(
 		tags.Wall,
-		components2.Object,
+		components.Object,
 	)
 )
 

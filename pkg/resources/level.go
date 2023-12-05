@@ -3,33 +3,69 @@ package resources
 import (
 	"encoding"
 	"image"
+	"log/slog"
 
-	"github.com/justgook/goplatformer/pkg/resolv/v2"
+	. "github.com/justgook/goplatformer/pkg/core/domain"
 	"github.com/justgook/goplatformer/pkg/util"
 )
 
-type Exits = util.Bits
-
-const (
-	ExitN util.Bits = 1 << iota
-	ExitE
-	ExitS
-	ExitW
-)
-
-type TagType = int64
 type Level struct {
 	*LevelData
-	Image image.Image
+	Tilesets []Tileset
 }
+
+type Tileset struct {
+	GridSize uint
+	Image    image.Image
+}
+type tilesetMarshalBinary struct {
+	GridSize uint
+	Image    []byte
+}
+
+// UnmarshalBinary implements encoding.BinaryUnmarshaler.
+func (t *Tileset) UnmarshalBinary(input []byte) error {
+	target := &tilesetMarshalBinary{}
+	if err := Load(input, target); err != nil {
+		return util.Catch(err)
+	}
+	img, err := BytesToImage(target.Image)
+	if err != nil {
+		return util.Catch(err)
+	}
+	t.GridSize = target.GridSize
+	t.Image = img
+
+	return nil
+}
+
+// MarshalBinary implements encoding.BinaryMarshaler.
+func (t *Tileset) MarshalBinary() (data []byte, err error) {
+	img, err := ImageToBytes(t.Image)
+	if err != nil {
+		return nil, util.Catch(err)
+	}
+	t.Image = nil
+	output, err := Save(tilesetMarshalBinary{
+		GridSize: t.GridSize,
+		Image:    img,
+	})
+	if err != nil {
+		return nil, util.Catch(err)
+	}
+	slog.Info("Tileset.MarshalBinary", "GridSize", t.GridSize)
+
+	return output, nil
+}
+
 type LevelData struct {
 	Rooms        []*Room
-	RoomsByExits map[Exits][]uint
+	RoomsByExits map[RoomNavigation][]uint
 }
 
 type levelMarshalBinary struct {
-	LevelData []byte
-	Image     []byte
+	*LevelData
+	Tilesets []Tileset
 }
 
 func (l *Level) UnmarshalBinary(input []byte) error {
@@ -37,42 +73,22 @@ func (l *Level) UnmarshalBinary(input []byte) error {
 	if err := Load(input, target1); err != nil {
 		return util.Catch(err)
 	}
-	if err := Load(target1.LevelData, &l.LevelData); err != nil {
-		return util.Catch(err)
-	}
-	img, err := BytesToImage(target1.Image)
-	if err != nil {
-		return util.Catch(err)
-	}
-	l.Image = img
+
+	l.LevelData = target1.LevelData
+	l.Tilesets = target1.Tilesets
 	return nil
 }
 
 func (l *Level) MarshalBinary() ([]byte, error) {
-	rooms, err := Save(l.LevelData)
-	if err != nil {
-		return nil, util.Catch(err)
-	}
-	img, err := ImageToBytes(l.Image)
-	if err != nil {
-		return nil, util.Catch(err)
-	}
 	output, err := Save(levelMarshalBinary{
-		LevelData: rooms,
-		Image:     img,
+		LevelData: l.LevelData,
+		Tilesets:  l.Tilesets,
 	})
 	if err != nil {
 		return nil, util.Catch(err)
 	}
 
 	return output, nil
-}
-
-type Doors struct {
-	N bool
-	E bool
-	S bool
-	W bool
 }
 
 type Tile struct {
@@ -82,24 +98,32 @@ type Tile struct {
 }
 
 type Room struct {
-	Layers    [][]Tile
-	Exits     Exits
-	W         int
-	H         int
-	Collision []*resolv.Object[TagType]
+	Layers            [][]Tile
+	RoomNavigation    RoomNavigation
+	W                 int
+	H                 int
+	Collision         []*Object
+	TriggerSpawnEnemy []*TriggerSpawnEnemy
+	LevelEnter        *LevelEnter
+}
+type TriggerSpawnEnemy struct {
+	Area    image.Rectangle
+	Enemies []*Enemy
 }
 
-type CollisionTag = int64
-
-const (
-	CollisionTagSolid     CollisionTag = 1
-	CollisionTagOneWayUp  CollisionTag = 3
-	CollisionTagLava      CollisionTag = 4
-	CollisionTagExitNorth CollisionTag = 5
-	CollisionTagExitEast  CollisionTag = 6
-	CollisionTagExitSouth CollisionTag = 7
-	CollisionTagExitWest  CollisionTag = 8
-)
+type Enemy struct {
+	image.Point
+	Patrol []image.Point
+}
+type LevelEnter struct {
+	Start  image.Point
+	EnterN image.Point
+	EnterE image.Point
+	EnterS image.Point
+	EnterW image.Point
+}
 
 var _ encoding.BinaryMarshaler = (*Level)(nil)
 var _ encoding.BinaryUnmarshaler = (*Level)(nil)
+var _ encoding.BinaryMarshaler = (*Tileset)(nil)
+var _ encoding.BinaryUnmarshaler = (*Tileset)(nil)

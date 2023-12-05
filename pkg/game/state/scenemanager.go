@@ -4,8 +4,6 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 )
 
-const transitionMaxCount = 20
-
 type Scene interface {
 	Init(state *GameState)
 	Update(state *GameState) error

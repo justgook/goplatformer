@@ -1,8 +1,8 @@
 package components
 
 import (
-	"github.com/justgook/goplatformer/pkg/resolv/v2"
+	"github.com/justgook/goplatformer/pkg/core/domain"
 	"github.com/yohamta/donburi"
 )
 
-var Object = donburi.NewComponentType[resolv.Object[string]]()
+var Object = donburi.NewComponentType[domain.Object]()

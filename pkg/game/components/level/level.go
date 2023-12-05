@@ -1,118 +1,132 @@
 package level
 
 import (
+	"image"
+	"log/slog"
+
 	"github.com/hajimehoshi/ebiten/v2"
+	. "github.com/justgook/goplatformer/pkg/core/domain"
+	"github.com/justgook/goplatformer/pkg/gen"
 	"github.com/justgook/goplatformer/pkg/pcg"
 	"github.com/justgook/goplatformer/pkg/resolv/v2"
 	"github.com/justgook/goplatformer/pkg/resources"
 	"github.com/justgook/goplatformer/pkg/util"
-	"image"
 )
 
-type Data struct {
-	RoomsInfo    []RoomMetaData
-	RoomsResults []*RoomResult
-	Size         image.Point
-	Goal         image.Point
-	Start        image.Point
-}
-type RoomPoint = image.Point
-type RoomMetaData struct {
-	Exits util.Bits
+type MinimapData struct {
 	RoomPoint
+	Exits util.Bits
 	Goal  bool
 	Start bool
 }
 
-type TagType = resources.CollisionTag
-type RoomResult struct {
-	Render    []*ebiten.Image
-	Rect      image.Rectangle
-	Collision []*resolv.Object[TagType]
+type Data struct {
+	Rooms         map[image.Point]*PlayData
+	CurrentRoomXY image.Point
+	CurrentRoom   *PlayData
+	Size          image.Point
 }
 
-const (
-	ExitN util.Bits = 1 << iota
-	ExitE
-	ExitS
-	ExitW
-)
+type RoomPoint = image.Point
 
-func New(rnd *pcg.PCG32, goalDistance, branchLength int, data *resources.Level, space *resolv.Space[string]) *Data {
-	output := generateData(rnd, goalDistance, branchLength)
-	tileset := ebiten.NewImageFromImage(data.Image)
-	output.RoomsResults = make([]*RoomResult, len(output.RoomsInfo))
-	output.Size = image.Point{}
+type RoomRender struct {
+	Render []*ebiten.Image
+	Rect   image.Rectangle
+}
 
-	for i := range output.RoomsInfo {
-		info := output.RoomsInfo[i]
-		available := data.RoomsByExits[info.Exits]
+type TmpRoomResult struct {
+	*RoomRender
+	Collision         []*Object
+	TriggerSpawnEnemy []string
+}
+
+type TileData struct {
+	Image *ebiten.Image
+	Rect  image.Rectangle
+}
+
+func (l *Data) fillPlayRoomData(
+	rnd *pcg.PCG32,
+	input *resources.Level,
+	tiles Tiles,
+) gen.RoomsLayoutFN {
+	return func(info *gen.RoomMetaData, _ image.Point, _ image.Point) {
+		available, ok := input.RoomsByExits[info.RoomNavigation]
+		if !ok {
+			available = input.RoomsByExits[info.RoomNavigation&0x0F]
+		}
 		randomI := rnd.Bounded(uint32(len(available)))
-		resData := data.Rooms[available[randomI]]
-		room := &RoomResult{
-			Collision: util.PointerSliceClone(resData.Collision),
-			Render:    bakeRoomLayers(tileset, resData),
-			Rect: image.Rect(
-				info.RoomPoint.X*256,           // TODO update to real coordinate
-				info.RoomPoint.Y*256,           // TODO update to real coordinate
-				info.RoomPoint.X*256+resData.W, // TODO update to real coordinate
-				info.RoomPoint.Y*256+resData.H, // TODO update to real coordinate
-			),
+		resData := input.Rooms[available[randomI]]
+
+		l.Rooms[info.RoomPoint] = &PlayData{
+			Features:          info.RoomNavigation,
+			RenderLayer:       l.bakeRoomRender(tiles, resData),
+			Collision:         util.PointerSliceClone(resData.Collision),
+			TriggerSpawnEnemy: util.PointerSliceClone(resData.TriggerSpawnEnemy),
+			LevelEnter:        &resources.LevelEnter{},
 		}
 
-		output.RoomsResults[i] = room
+		*l.Rooms[info.RoomPoint].LevelEnter = *resData.LevelEnter
 
-		output.Size.X = max(output.Size.X, room.Rect.Max.X)
-		output.Size.Y = max(output.Size.Y, room.Rect.Max.Y)
+		// TODO Update to real math
+		l.Size.X = max(l.Size.X, resData.W)
+		l.Size.Y = max(l.Size.Y, resData.H)
+	}
+}
+
+func (l *Data) SetCurrent(p image.Point, space *ObjectSpace) {
+	space.UnregisterAllObjects()
+	l.CurrentRoomXY = p
+	l.CurrentRoom = l.Rooms[p]
+	slog.Info("components.level.SetCurrent", "collision", l.CurrentRoom.Collision)
+
+	for _, obj := range l.CurrentRoom.Collision {
+		space.Add(obj)
 	}
 
-	space.Resize(output.Size.X, output.Size.Y)
+	for i := range l.CurrentRoom.TriggerSpawnEnemy {
+		obj := l.CurrentRoom.TriggerSpawnEnemy[i].Area
+		space.Add(
+			resolv.NewObject(
+				float64(obj.Min.X),
+				float64(obj.Min.Y),
+				float64(obj.Dx()),
+				float64(obj.Dy()),
+				ObjectTagEnemyTrigger,
+			))
+	}
+}
 
-	for i := range output.RoomsResults {
-		room := output.RoomsResults[i]
-		for _, obj := range room.Collision {
-			obj.X += float64(room.Rect.Min.X)
-			obj.Y += float64(room.Rect.Min.Y)
+func New(
+	rnd *pcg.PCG32,
+	goalDistance, branchLength int,
+	data *resources.Level,
+	collisionSpace *ObjectSpace,
+) *Data {
+	output := &Data{}
+	output.Rooms = make(map[image.Point]*PlayData)
+	tiles := remapTileset(data.Tilesets)
+	gen.RoomsLayout(rnd, goalDistance, branchLength, output.fillPlayRoomData(rnd, data, tiles))
 
-			addToSpace(space, obj)
+	collisionSpace.Resize(output.Size.X, output.Size.Y)
+	for k := range output.Rooms {
+		if output.Rooms[k].Features.Has(RoomNavigationStart) {
+			output.SetCurrent(k, collisionSpace)
+			break
 		}
 	}
 
 	return output
 }
 
-func addToSpace(space *resolv.Space[string], obj *resolv.Object[TagType]) {
-	tag := "solid"
-	switch obj.Tags[0] {
-	case resources.CollisionTagSolid:
-		tag = "solid"
-	case resources.CollisionTagOneWayUp:
-		tag = "platform"
-	case resources.CollisionTagLava:
-		tag = "lava"
-	case resources.CollisionTagExitNorth:
-		tag = "ExitNorth"
-	case resources.CollisionTagExitEast:
-		tag = "ExitEast"
-	case resources.CollisionTagExitSouth:
-		tag = "ExitSouth"
-	case resources.CollisionTagExitWest:
-		tag = "ExitWest"
-	}
-	out := resolv.NewObject(obj.X, obj.Y, obj.W, obj.H, tag)
-	space.Add(out)
-}
-
-func bakeRoomLayers(tileSet *ebiten.Image, source *resources.Room) []*ebiten.Image {
+func (l *Data) bakeRoomRender(tiles Tiles, source *resources.Room) []*ebiten.Image {
 	roomLayers := make([]*ebiten.Image, 0, len(source.Layers))
+
 	for _, layer := range source.Layers {
 		layerImage := ebiten.NewImage(source.W, source.H)
 		for _, tileData := range layer {
-			id := tileData.T
-			x1 := int(id%12) * 16
-			y1 := int(id/12) * 16
-			rect := image.Rect(x1, y1, x1+16, y1+16)
-			tileImg := tileSet.SubImage(rect).(*ebiten.Image)
+			tile := tiles[tileData.T]
+			tileImg := tile.Image.SubImage(tile.Rect).(*ebiten.Image)
 
 			op := &ebiten.DrawImageOptions{}
 			op.GeoM.Translate(float64(tileData.X), float64(tileData.Y))
@@ -121,4 +135,13 @@ func bakeRoomLayers(tileSet *ebiten.Image, source *resources.Room) []*ebiten.Ima
 		roomLayers = append(roomLayers, layerImage)
 	}
 	return roomLayers
+}
+
+type PlayData struct {
+	Features    RoomNavigation
+	RenderLayer []*ebiten.Image
+	// TODO merge those two together?
+	Collision         []*Object
+	TriggerSpawnEnemy []*resources.TriggerSpawnEnemy
+	LevelEnter        *resources.LevelEnter
 }

@@ -2,9 +2,6 @@ package game
 
 import (
 	"fmt"
-	"image"
-	"log/slog"
-
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/justgook/goplatformer"
@@ -29,8 +26,6 @@ type PlayScene struct {
 	worldScreen *ebiten.Image
 	camera      *components.CameraData
 
-	delme image.Point
-
 	ui *ui.View
 }
 
@@ -38,41 +33,29 @@ type PlayScene struct {
 func (p *PlayScene) Init(st *state.GameState) {
 	p.world = ecs.NewECS(donburi.NewWorld())
 
-	spaceEntity := entity.CreateSpace(p.world)
-	space := components.Space.Get(spaceEntity)
+	collisionSpace := components.Space.Get(entity.CreateSpace(p.world))
 
-	levelEntity := entity.CreateLevel(p.world, st, space)
+	levelEntity := entity.CreateLevel(p.world, st, collisionSpace)
 	level := components.Level.Get(levelEntity)
 
 	// Spawn player START
 	playerEnt := entity.CreatePlayer(p.world, *goplatformer.EmbeddedPlayerAnimation, st.Input.Input)
 	player := components.Object.Get(playerEnt)
-	player.X = float64(level.Start.X*256 + 128)
-	player.Y = float64(level.Start.Y*256 + 128)
-	space.Add(player)
+	player.X = float64(128)
+	player.Y = float64(128)
+	collisionSpace.Add(player)
 	// Spawn player END
 
-	//entity.CreatePlayer(p.world, *goplatformer.EmbeddedPlayerAnimation, st.Input.Input),
+	// TEST BULLET EMITTER//
+	playerEntry := playerEnt.Entity()
+	entity.CreateBulletEmitter(p.world, goplatformer.TestBullet, playerEntry, playerEntry)
 
 	// CAMERA STUFF Start
 
 	p.worldScreen = ebiten.NewImage(level.Size.X, level.Size.Y)
-	p.camera = &components.CameraData{
-		ViewPort: f64.Vec2{
-			float64(st.DeviceInfo.ScreenWidth),
-			float64(st.DeviceInfo.ScreenHeight),
-		},
-	}
-	p.camera.SetPosition(
-		f64.Vec2{
-			float64(components.Level.Get(levelEntity).Start.X*256 + 128),
-			float64(components.Level.Get(levelEntity).Start.Y*256 + 128),
-		},
-	)
-	slog.Info("START",
-		"X", components.Level.Get(levelEntity).Start.X,
-		"Y", components.Level.Get(levelEntity).Start.Y,
-	)
+	p.camera = &components.CameraData{ViewPort: f64.Vec2{float64(st.DeviceInfo.ScreenWidth), float64(st.DeviceInfo.ScreenHeight)}}
+	p.camera.SetPosition(f64.Vec2{})
+
 	// CAMERA STUFF End
 
 	//ui.Debug = true
@@ -84,21 +67,31 @@ func (p *PlayScene) Init(st *state.GameState) {
 	}
 
 	levelMap := &panel.LevelMap{}
-	levelMap.Init(components.Level.Get(levelEntity), &p.delme)
+
+	levelMap.Init(components.Level.Get(levelEntity), &level.CurrentRoomXY)
 	p.ui.AddChild(levelMap.View)
 	// ---------------------- UI STUFF END --------------------------
 
+	/*-----------------------------------SYSTEMS-------------------------------------------*/
 	p.world.AddSystem(system.UpdatePlayer)
 	p.world.AddSystem(system.UpdateCharAnim)
+	p.world.AddSystem(system.UpdateBulletEmitter)
+	p.world.AddSystem(system.UpdateBullets)
+
+	p.world.AddSystem(system.EnemyTrigger)
+	p.world.AddSystem(system.ExitTrigger)
+
+	/*-----------------------------------RENDERS-------------------------------------------*/
 	p.world.AddRenderer(layers.Background, renderer.Level)
-	//p.world.AddRenderer(layers.Background, renderer.Player)
 	p.world.AddRenderer(layers.Background, renderer.CharAnim)
+	p.world.AddRenderer(layers.Background, renderer.Bullets)
 
 	//p.world.AddRenderer(layers.Background, renderer.Wall)
 }
 
 // Draw implements state.Scene.
 func (p *PlayScene) Draw(screen *ebiten.Image) {
+	p.worldScreen.Clear()
 	p.world.Draw(p.worldScreen)
 	p.camera.Render(p.worldScreen, screen)
 
@@ -106,10 +99,12 @@ func (p *PlayScene) Draw(screen *ebiten.Image) {
 	//DEBUG INFO
 	p.camera.DebugInfoDraw(screen)
 
+	levelEnt, _ := components.Level.First(p.world.World)
+	levelComp := components.Level.Get(levelEnt)
 	ebitenutil.DebugPrintAt(
 		screen,
 		fmt.Sprintf("Room: %d,%d",
-			p.delme.X, p.delme.Y,
+			levelComp.CurrentRoomXY.X, levelComp.CurrentRoomXY.Y,
 		),
 		int(p.camera.ViewPort[0])-96, int(p.camera.ViewPort[1])-16,
 	)
@@ -117,7 +112,6 @@ func (p *PlayScene) Draw(screen *ebiten.Image) {
 
 // Update implements state.Scene.
 func (p *PlayScene) Update(state *state.GameState) error {
-	p.delme = p.cameraToRoom()
 	p.camera.DebugUpdate()
 	p.cameraFollowPlayer()
 
@@ -137,11 +131,4 @@ func (p *PlayScene) cameraFollowPlayer() {
 // Terminate implements state.Scene.
 func (p *PlayScene) Terminate() {
 	p.world = nil
-}
-
-func (p *PlayScene) cameraToRoom() image.Point {
-	output := p.camera.Center()
-	return image.Point{
-		X: int(output[0]) / 256, Y: int(output[1]) / 256,
-	}
 }

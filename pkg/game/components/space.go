@@ -1,8 +1,8 @@
 package components
 
 import (
-	"github.com/justgook/goplatformer/pkg/resolv/v2"
+	"github.com/justgook/goplatformer/pkg/core/domain"
 	"github.com/yohamta/donburi"
 )
 
-var Space = donburi.NewComponentType[resolv.Space[string]]()
+var Space = donburi.NewComponentType[domain.ObjectSpace]()

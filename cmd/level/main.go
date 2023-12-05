@@ -2,10 +2,16 @@ package main
 
 import (
 	"flag"
+	"fmt"
+	"image"
 	"log/slog"
 	"os"
+	"path"
+	"path/filepath"
 	"slices"
+	"strings"
 
+	. "github.com/justgook/goplatformer/pkg/core/domain"
 	"github.com/justgook/goplatformer/pkg/gameLogger/cli"
 	"github.com/justgook/goplatformer/pkg/ldtk/v2"
 	"github.com/justgook/goplatformer/pkg/resolv/v2"
@@ -13,33 +19,40 @@ import (
 	"github.com/justgook/goplatformer/pkg/util"
 )
 
-type Tag = resources.TagType
-type Object = resolv.Object[Tag]
-
 func main() {
 	handler := cli.New(os.Stderr, &cli.Options{
 		HandlerOptions: slog.HandlerOptions{Level: slog.LevelDebug},
 	})
 	slog.SetDefault(slog.New(handler))
 
-	tileset := flag.String("tileset", "unknown.png", "img data file")
 	inputLevel := flag.String("level", "unknown.ldtk", "img data file")
 	outPath := flag.String("o", "unknown.gob", "output location")
 	flag.Parse()
 
 	dataBytes := util.GetOrDie(os.ReadFile(*inputLevel))
 	jsonData := util.GetOrDie(ldtk.UnmarshalLdtkJSON(dataBytes))
-	imgBytes := util.GetOrDie(os.ReadFile(*tileset))
 
 	output := &resources.Level{
-		LevelData: &resources.LevelData{
-			Rooms:        []*resources.Room{},
-			RoomsByExits: map[resources.Exits][]uint{},
-		},
-		Image: util.GetOrDie(resources.BytesToImage(imgBytes)),
+		LevelData: &resources.LevelData{Rooms: []*resources.Room{}, RoomsByExits: map[RoomNavigation][]uint{}},
+		Tilesets:  []resources.Tileset{},
 	}
 
 	slog.Info("========================================================================================")
+	tilesetDir := filepath.Dir(*outPath)
+	for _, t := range jsonData.Defs.Tilesets {
+		if t.RelPath == nil {
+			continue
+		}
+		filename := path.Join(tilesetDir, *t.RelPath)
+		filename = strings.TrimSuffix(filename, filepath.Ext(filename))
+		filename += ".png"
+		imgBytes := util.GetOrDie(os.ReadFile(filename))
+
+		output.Tilesets = append(output.Tilesets, resources.Tileset{
+			GridSize: uint(t.TileGridSize),
+			Image:    util.GetOrDie(resources.BytesToImage(imgBytes)),
+		})
+	}
 
 	for worldI, world := range jsonData.Worlds {
 		if worldI > 0 {
@@ -55,11 +68,13 @@ func main() {
 			//slog.With("room", room.Identifier)
 			collisionFound := false
 			outputRoom := &resources.Room{
-				Layers:    [][]resources.Tile{},
-				Exits:     0,
-				W:         int(room.PxWid),
-				H:         int(room.PxHei),
-				Collision: nil,
+				Layers:            [][]resources.Tile{},
+				RoomNavigation:    0,
+				W:                 int(room.PxWid),
+				H:                 int(room.PxHei),
+				Collision:         nil,
+				TriggerSpawnEnemy: []*resources.TriggerSpawnEnemy{},
+				LevelEnter:        &resources.LevelEnter{},
 			}
 			roomLogger := worldLogger.With(
 				slog.Group("room",
@@ -69,6 +84,7 @@ func main() {
 			)
 			//the 1st layer is the top-most and the last is behind.
 			slices.Reverse(room.LayerInstances)
+			spawnCache := SpawnTmp{}
 			for _, layer := range room.LayerInstances {
 				var outputLayer []resources.Tile
 				layerLogger := roomLogger.With(slog.Group("layer",
@@ -91,6 +107,9 @@ func main() {
 
 				if len(layer.EntityInstances) > 0 {
 					layerLogger.Info("parsing Entities")
+					for _, entity := range layer.EntityInstances {
+						parseEntity(spawnCache, entity, layer.GridSize, outputRoom)
+					}
 				}
 
 				if len(layer.AutoLayerTiles) > 0 {
@@ -105,7 +124,7 @@ func main() {
 				}
 
 				if len(layer.GridTiles) > 0 {
-					layerLogger.Info("parsing GridTiles", "GridTiles", layer.GridTiles)
+					layerLogger.Info("parsing GridTiles")
 					for _, tile := range layer.GridTiles {
 						outputLayer = append(outputLayer, resources.Tile{
 							X: tile.Px[0],
@@ -120,7 +139,8 @@ func main() {
 				}
 			}
 			output.Rooms = append(output.Rooms, outputRoom)
-			output.RoomsByExits[outputRoom.Exits] = append(output.RoomsByExits[outputRoom.Exits], uint(index))
+
+			output.RoomsByExits[outputRoom.RoomNavigation] = append(output.RoomsByExits[outputRoom.RoomNavigation], uint(index))
 		}
 	}
 	slog.Info("========================================================================================")
@@ -129,6 +149,134 @@ func main() {
 	defer file.Close()
 	util.GetOrDie(file.Write(toFile))
 }
+
+/* =======================Parse Entity layer================================================================= */
+
+func parseEntity(spawnCache SpawnTmp, entity ldtk.EntityInstance, cellSize int64, target *resources.Room) {
+	switch entity.Identifier {
+	case "ExitNorth":
+		target.RoomNavigation = target.RoomNavigation.Set(RoomNavigationExitN)
+
+		obj := resolv.NewObject[ObjectTag](float64(entity.Px[0]), float64(entity.Px[1]), float64(entity.Width), float64(entity.Height), ObjectTagExitTriggerNorth)
+		target.Collision = append(target.Collision, obj)
+	case "ExitEast":
+		target.RoomNavigation = target.RoomNavigation.Set(RoomNavigationExitE)
+
+		obj := resolv.NewObject[ObjectTag](float64(entity.Px[0]), float64(entity.Px[1]), float64(entity.Width),
+			float64(entity.Height), ObjectTagExitTriggerEast)
+		target.Collision = append(target.Collision, obj)
+	case "ExitSouth":
+		target.RoomNavigation = target.RoomNavigation.Set(RoomNavigationExitS)
+
+		obj := resolv.NewObject[ObjectTag](float64(entity.Px[0]), float64(entity.Px[1]), float64(entity.Width),
+			float64(entity.Height), ObjectTagExitTriggerSouth)
+		target.Collision = append(target.Collision, obj)
+	case "ExitWest":
+		target.RoomNavigation = target.RoomNavigation.Set(RoomNavigationExitW)
+
+		obj := resolv.NewObject[ObjectTag](float64(entity.Px[0]), float64(entity.Px[1]), float64(entity.Width),
+			float64(entity.Height), ObjectTagExitTriggerWest)
+		target.Collision = append(target.Collision, obj)
+
+	case "LevelStart":
+		target.RoomNavigation = target.RoomNavigation.Set(RoomNavigationStart)
+		target.LevelEnter.Start = EntityToBottomCenterPoint(entity)
+	case "LevelGoal":
+		target.RoomNavigation = target.RoomNavigation.Set(RoomNavigationGoal)
+
+		obj := resolv.NewObject[ObjectTag](
+			float64(entity.Px[0]),
+			float64(entity.Px[1]),
+			float64(entity.Width),
+			float64(entity.Height), ObjectTagGoal)
+		target.Collision = append(target.Collision, obj)
+
+	case "PlayerSpawnNorth":
+		target.LevelEnter.EnterN = EntityToBottomCenterPoint(entity)
+	case "PlayerSpawnEast":
+		target.LevelEnter.EnterE = EntityToBottomCenterPoint(entity)
+	case "PlayerSpawnSouth":
+		target.LevelEnter.EnterS = EntityToBottomCenterPoint(entity)
+	case "PlayerSpawnWest":
+		target.LevelEnter.EnterW = EntityToBottomCenterPoint(entity)
+	case "TriggerSpawnEnemy":
+		parseTriggerSpawnEnemy(spawnCache, entity, target)
+	case "SpawnEnemyGround":
+		parseSpawnEnemyGround(spawnCache, entity, cellSize, target)
+	}
+}
+
+func EntityToBottomCenterPoint(entity ldtk.EntityInstance) image.Point {
+	return image.Point{
+		X: int(entity.Px[0]) + int(entity.Width/2),
+		Y: int(entity.Px[1]) + int(entity.Height),
+	}
+}
+
+type SpawnTmp = map[string]*resources.TriggerSpawnEnemy
+
+func getFromSpawnTmp(id string, spawnCache SpawnTmp, target *resources.Room) *resources.TriggerSpawnEnemy {
+	output, ok := spawnCache[id]
+	if !ok {
+		output = &resources.TriggerSpawnEnemy{
+			Area:    image.Rectangle{},
+			Enemies: []*resources.Enemy{},
+		}
+		spawnCache[id] = output
+		target.TriggerSpawnEnemy = append(target.TriggerSpawnEnemy, output)
+	}
+
+	return output
+}
+func parseSpawnEnemyGround(spawnCache SpawnTmp, entity ldtk.EntityInstance, cellSize int64, target *resources.Room) {
+	result := &resources.Enemy{
+		Point: image.Point{
+			X: int(entity.Px[0]),
+			Y: int(entity.Px[1]),
+		},
+		Patrol: []image.Point{},
+	}
+	slog.Info("-------------------------------------------------------")
+	fmt.Printf("Patrol: %+v\n", entity)
+	slog.Info("-------------------------------------------------------")
+
+	for _, value := range entity.FieldInstances {
+		switch value.Identifier {
+		case "Patrol":
+			props := value.Value.([]interface{})
+			result.Patrol = append(result.Patrol, image.Point{
+				X: int(entity.Px[0]),
+				Y: int(entity.Px[1]),
+			})
+			for _, point := range props {
+				p := point.(map[string]interface{})
+				result.Patrol = append(result.Patrol, image.Point{
+					X: int(p["cx"].(float64)) * int(cellSize),
+					Y: int(p["cy"].(float64)) * int(cellSize),
+				})
+			}
+
+		case "Trigger":
+			props := value.Value.(map[string]interface{})
+			container := getFromSpawnTmp(props["entityIid"].(string), spawnCache, target)
+			container.Enemies = append(container.Enemies, result)
+		}
+	}
+
+	// getSpawnCache()
+
+}
+func parseTriggerSpawnEnemy(spawnCache SpawnTmp, entity ldtk.EntityInstance, target *resources.Room) {
+	x := int(entity.Px[0])
+	y := int(entity.Px[1])
+	w := int(entity.Width)
+	h := int(entity.Height)
+	area := image.Rect(x, y, x+w, y+h)
+	spawnArea := getFromSpawnTmp(entity.Iid, spawnCache, target)
+	spawnArea.Area = area
+}
+
+/* =======================Parse Collison layer================================================================= */
 
 type Point struct {
 	X int64
@@ -152,12 +300,6 @@ func updateCache(cache map[*Object][]Point, matrix [][]*Object, was, now *Object
 }
 
 func parseCollisionLayer(input []int64, w, h, cellSize int64, target *resources.Room) {
-	slog.Info("parseCollisionLayer",
-		"w", w,
-		"h", h,
-		"cellSize", cellSize,
-	)
-
 	tmp := make([][]*Object, w)
 	for i := range tmp {
 		tmp[i] = make([]*Object, h)
@@ -174,7 +316,7 @@ func parseCollisionLayer(input []int64, w, h, cellSize int64, target *resources.
 		if neighbor != nil &&
 			current.Y == neighbor.Y &&
 			current.H == neighbor.H &&
-			neighbor.IsSameTags([]Tag{tag}) {
+			neighbor.IsSameTags([]ObjectTag{tag}) {
 			neighbor.W += float64(cellSize)
 			updateCache(cache, tmp, current, neighbor)
 
@@ -195,7 +337,7 @@ func parseCollisionLayer(input []int64, w, h, cellSize int64, target *resources.
 		if neighbor != nil &&
 			current.X == neighbor.X &&
 			current.W == neighbor.W &&
-			neighbor.IsSameTags([]Tag{tag}) {
+			neighbor.IsSameTags([]ObjectTag{tag}) {
 			neighbor.H += float64(cellSize)
 
 			updateCache(cache, tmp, current, neighbor)
@@ -230,7 +372,7 @@ func parseCollisionLayer(input []int64, w, h, cellSize int64, target *resources.
 			continue
 		}
 
-		obj := resolv.NewObject[Tag](
+		obj := resolv.NewObject[ObjectTag](
 			float64(x*cellSize),
 			float64(y*cellSize),
 			float64(cellSize),
@@ -244,16 +386,6 @@ func parseCollisionLayer(input []int64, w, h, cellSize int64, target *resources.
 		b := mergeLeft(x, y, tag)
 		if !a && b {
 			mergeUp(x, y, tag)
-		}
-		switch tag {
-		case resources.CollisionTagExitNorth:
-			target.Exits = target.Exits.Set(resources.ExitN)
-		case resources.CollisionTagExitEast:
-			target.Exits = target.Exits.Set(resources.ExitE)
-		case resources.CollisionTagExitSouth:
-			target.Exits = target.Exits.Set(resources.ExitS)
-		case resources.CollisionTagExitWest:
-			target.Exits = target.Exits.Set(resources.ExitW)
 		}
 	}
 

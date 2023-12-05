@@ -26,7 +26,7 @@ func New() *Game {
 	gameState.SetScene(&BlackScene{})
 	gameState.SetScene(&IntroScene{})
 
-	gameState.SetScene(&PlayScene{})
+	//gameState.SetScene(&PlayScene{})
 
 	return &Game{
 		State: gameState,
@@ -42,6 +42,4 @@ func (g *Game) Update() error {
 
 func (g *Game) Draw(screen *ebiten.Image) {
 	g.State.Draw(screen)
-	//ebitenutil.DebugPrint(screen, fmt.Sprintf("FPS: %f", ebiten.ActualFPS()))
-
 }

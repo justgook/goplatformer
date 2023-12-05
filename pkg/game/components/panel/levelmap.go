@@ -5,17 +5,16 @@ import (
 	"image/color"
 
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/justgook/goplatformer/pkg/game/components"
+	. "github.com/justgook/goplatformer/pkg/core/domain"
 	"github.com/justgook/goplatformer/pkg/game/components/level"
 	"github.com/justgook/goplatformer/pkg/ui"
-	"github.com/justgook/goplatformer/pkg/util"
 )
 
 type LevelMap struct {
 	View *ui.View
 }
 
-func (l *LevelMap) Init(data *level.Data, delme *image.Point) {
+func (l *LevelMap) Init(data *level.Data, currentRoom *image.Point) {
 	l.View = &ui.View{
 		WidthInPct:  100,
 		HeightInPct: 100,
@@ -37,9 +36,9 @@ func (l *LevelMap) Init(data *level.Data, delme *image.Point) {
 	roomH := 16
 	finalW := 1
 	finalH := 1
-	for _, item := range data.RoomsInfo {
-		top := margin + (roomH+margin)*item.Y
-		left := margin + (roomW+margin)*item.X
+	for k, item := range data.Rooms {
+		top := margin + (roomH+margin)*k.Y
+		left := margin + (roomW+margin)*k.X
 		wrapper.AddChild(&ui.View{
 			Position: ui.PositionAbsolute,
 			Width:    roomW,
@@ -47,11 +46,9 @@ func (l *LevelMap) Init(data *level.Data, delme *image.Point) {
 			Top:      top,
 			Left:     left,
 			Handler: &MapRoomUI{
-				Exits: item.Exits,
-				Goal:  item.Goal,
-				Start: item.Start,
-				Point: item.RoomPoint,
-				Delme: delme,
+				Features:    item.Features,
+				Point:       k,
+				CurrentRoom: currentRoom,
 			},
 		})
 		finalW = max(finalW, left+margin+roomW)
@@ -63,19 +60,17 @@ func (l *LevelMap) Init(data *level.Data, delme *image.Point) {
 }
 
 type MapRoomUI struct {
-	Exits util.Bits
-	Goal  bool
-	Start bool
+	Features RoomNavigation
 	image.Point
 	//
-	Delme *image.Point
+	CurrentRoom *image.Point
 }
 
 func (mr *MapRoomUI) Draw(screen *ebiten.Image, frame image.Rectangle, v *ui.View) {
 	cellColor := color.RGBA{R: 0x77, G: 0x66, B: 0x66, A: 0xff}
-	if mr.Start {
+	if mr.Features.Has(RoomNavigationStart) {
 		cellColor.G = 0xff
-	} else if mr.Goal {
+	} else if mr.Features.Has(RoomNavigationGoal) {
 		cellColor.R = 0xff
 	}
 
@@ -84,7 +79,7 @@ func (mr *MapRoomUI) Draw(screen *ebiten.Image, frame image.Rectangle, v *ui.Vie
 		Color: cellColor,
 	})
 
-	if *mr.Delme == mr.Point {
+	if *mr.CurrentRoom == mr.Point {
 		ui.DrawRect(screen, &ui.DrawRectOpts{
 			Rect:        frame,
 			Color:       color.RGBA{R: 0xFF, A: 0xff},
@@ -98,7 +93,7 @@ func (mr *MapRoomUI) Draw(screen *ebiten.Image, frame image.Rectangle, v *ui.Vie
 	dw := 1
 	dh := 2
 	doorColor := color.RGBA{R: 0xcc, G: 0xcc, B: 0xcc, A: 0xff}
-	if mr.Exits.Has(components.ExitN) {
+	if mr.Features.Has(RoomNavigationExitN) {
 		ui.FillRect(screen,
 			&ui.FillRectOpts{
 				Rect:  image.Rect(x-dw+w/2, y-dh, x+dw+w/2, y+dh),
@@ -106,7 +101,7 @@ func (mr *MapRoomUI) Draw(screen *ebiten.Image, frame image.Rectangle, v *ui.Vie
 			},
 		)
 	}
-	if mr.Exits.Has(components.ExitE) {
+	if mr.Features.Has(RoomNavigationExitE) {
 		ui.FillRect(screen,
 			&ui.FillRectOpts{
 
@@ -115,7 +110,7 @@ func (mr *MapRoomUI) Draw(screen *ebiten.Image, frame image.Rectangle, v *ui.Vie
 			},
 		)
 	}
-	if mr.Exits.Has(components.ExitS) {
+	if mr.Features.Has(RoomNavigationExitS) {
 		ui.FillRect(screen,
 			&ui.FillRectOpts{
 				Rect:  image.Rect(x-dw+w/2, y-dh+h, x+dw+w/2, y+dh+h),
@@ -123,7 +118,7 @@ func (mr *MapRoomUI) Draw(screen *ebiten.Image, frame image.Rectangle, v *ui.Vie
 			},
 		)
 	}
-	if mr.Exits.Has(components.ExitW) {
+	if mr.Features.Has(RoomNavigationExitW) {
 		ui.FillRect(screen,
 			&ui.FillRectOpts{
 				Rect:  image.Rect(x-dh, y+h/2-dw, x+dh, y+h/2+dw),

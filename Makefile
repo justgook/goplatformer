@@ -46,11 +46,16 @@ SRC_CHAR = $(wildcard $(ASSET_DIR)/*.char.aseprite)
 SRC_CHAR += $(wildcard $(ASSET_DIR)/*/*.char.aseprite)
 SRC_CHAR += $(wildcard $(ASSET_DIR)/*/*/*.char.aseprite)
 
+OUT_TILESET = $(SRC_TILESET:.tileset.aseprite=.tileset.png)
+OUT_TILESET := $(subst $(ASSET_DIR),$(BUILD_DIR),$(OUT_TILESET))
+
 RESOURCES := $(SRC_LEVEL:.ldtk=.level)
-RESOURCES += $(SRC_TILESET:.tileset.aseprite=.tileset.png)
+RESOURCES += $(OUT_TILESET)
 RESOURCES += $(SRC_SPRITE:.sprite.aseprite=.sprite)
 RESOURCES += $(SRC_CHAR:.char.aseprite=.char)
 RESOURCES := $(subst $(ASSET_DIR),$(BUILD_DIR),$(RESOURCES))
+RESOURCES += $(OUT_TILESET)
+
 
 APP_DIR := ./cmd/game
 
@@ -215,12 +220,11 @@ resources: $(RESOURCES)
 
 $(BUILD_DIR)/%.level: export GOOS=$(SYS_GOOS)
 $(BUILD_DIR)/%.level: export GOARCH=$(SYS_GOARCH)
-$(BUILD_DIR)/%.level: $(ASSET_DIR)/%.ldtk $(BUILD_DIR)/%.tileset.png
+$(BUILD_DIR)/%.level: $(ASSET_DIR)/%.ldtk $(OUT_TILESET)
 	$(Q)echo ... building $@ from $<
 	$(Q)$(MKDIR_P) $(dir $@)
 	$(Q)go run ./cmd/level \
 		-o $@ \
-		--tileset $(BUILD_DIR)/$*.tileset.png \
 		--level $(ASSET_DIR)/$*.ldtk
 
 $(BUILD_DIR)/%.sprite: export GOOS=$(SYS_GOOS)
@@ -302,3 +306,4 @@ aseprite/aseprite:
 	$(Q)$(MKDIR_P) "$(CURDIR)/aseprite"
 	$(Q)cp -R $(TMP)/aseprite/build/bin/aseprite $(TMP)/aseprite/build/bin/data "$(CURDIR)/aseprite/"
 	$(Q)rm -rf $(TMP)
+

@@ -5,12 +5,15 @@ import (
 	"github.com/justgook/goplatformer/pkg/pcg"
 )
 
+const transitionMaxCount = 20
+
 type DeviceInfo struct {
 	ScreenWidth  int
 	ScreenHeight int
 }
 
 type GameState struct {
+	InitialSeed  uint64
 	Rand         *pcg.PCG32
 	DeviceInfo   *DeviceInfo
 	SceneManager *SceneManager
@@ -18,7 +21,8 @@ type GameState struct {
 }
 
 func (g *GameState) Init(w, h int, seed uint64) {
-	g.Rand = pcg.NewPCG32().Seed(seed, 1)
+	g.InitialSeed = seed
+	g.Rand = pcg.NewPCG32().Seed(seed, g.InitialSeed)
 	g.SceneManager = &SceneManager{
 		current:         nil,
 		next:            nil,

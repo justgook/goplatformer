@@ -1,6 +1,7 @@
 package system
 
 import (
+	"github.com/justgook/goplatformer/pkg/core/domain"
 	"math"
 
 	"github.com/justgook/goplatformer/pkg/game/components"
@@ -57,7 +58,7 @@ func UpdatePlayer(ecs *ecs.ECS) {
 	if input.Jump.JustPressed {
 		if input.S.Down &&
 			player.OnGround != nil &&
-			player.OnGround.HaveTags("platform") {
+			player.OnGround.HaveTags(domain.ObjectTagOneWayUp) {
 			player.IgnorePlatform = player.OnGround
 		} else {
 			if player.OnGround != nil {
@@ -92,7 +93,7 @@ func UpdatePlayer(ecs *ecs.ECS) {
 	// Moving horizontally is done fairly simply; we just check to see if something solid is in front of us. If so, we move into contact with it
 	// and stop horizontal movement speed. If not, then we can just move forward.
 
-	if check := playerObject.Check(player.SpeedX, 0, "solid"); check != nil {
+	if check := playerObject.Check(player.SpeedX, 0, domain.ObjectTagSolid); check != nil {
 
 		dx = check.ContactWithCell(check.Cells[0]).X()
 		player.SpeedX = 0
@@ -132,18 +133,24 @@ func UpdatePlayer(ecs *ecs.ECS) {
 
 	// We check for any solid / stand-able objects. In actuality, there aren't any other Objects
 	// with other tags in this Space, so we don't -have- to specify any tags, but it's good to be specific for clarity in this example.
-	if check := playerObject.Check(0, checkDistance, "solid", "platform", "ramp"); check != nil {
+	if check := playerObject.Check(
+		0,
+		checkDistance,
+		domain.ObjectTagSolid,
+		domain.ObjectTagOneWayUp,
+		domain.ObjectTagRamp); check != nil {
 
 		// So! Firstly, we want to see if we jumped up into something that we can slide around horizontally to avoid bumping the Player's head.
 
-		// Sliding around a misspaced jump is a small thing that makes jumping a bit more forgiving, and is something different polished platformers
+		// Sliding around a mis spaced jump is a small thing that makes jumping a bit more forgiving,
+		//and is something different polished platformers
 		// (like the 2D Mario games) do to make it a smidge more comfortable to play. For a visual example of this, see this excellent devlog post
 		// from the extremely impressive indie game, Leilani's Island: https://forums.tigsource.com/index.php?topic=46289.msg1387138#msg1387138
 
 		// To accomplish this sliding, we simply call Collision.SlideAgainstCell() to see if we can slide.
 		// We pass the first cell, and tags that we want to avoid when sliding (i.e. we don't want to slide into cells that contain other solid objects).
 
-		slide := check.SlideAgainstCell(check.Cells[0], "solid")
+		slide := check.SlideAgainstCell(check.Cells[0], domain.ObjectTagSolid)
 
 		// We further ensure that we only slide if:
 		// 1) We're jumping up into something (dy < 0),
@@ -152,7 +159,7 @@ func UpdatePlayer(ecs *ecs.ECS) {
 		// 4) If the proposed slide is less than 8 pixels in horizontal distance. (This is a relatively arbitrary number that just so happens to be half the
 		// width of a cell. This is to ensure the player doesn't slide too far horizontally.)
 
-		if dy < 0 && check.Cells[0].ContainsTags("solid") && slide != nil && math.Abs(slide.X()) <= 8 {
+		if dy < 0 && check.Cells[0].ContainsTags(domain.ObjectTagSolid) && slide != nil && math.Abs(slide.X()) <= 8 {
 
 			// If we are able to slide here, we do so. No contact was made, and vertical speed (dy) is maintained upwards.
 			playerObject.X += slide.X()
@@ -168,7 +175,7 @@ func UpdatePlayer(ecs *ecs.ECS) {
 
 			// We get the ramp by simply filtering out Objects with the "ramp" tag out of the objects returned in our broad Check(), and grabbing the first one
 			// if there's any at all.
-			if ramps := check.ObjectsByTags("ramp"); len(ramps) > 0 {
+			if ramps := check.ObjectsByTags(domain.ObjectTagRamp); len(ramps) > 0 {
 
 				ramp := ramps[0]
 
@@ -210,7 +217,7 @@ func UpdatePlayer(ecs *ecs.ECS) {
 			// with the top of the platform object. An alternative would be to use Collision.ContactWithCell(), but that would be only if the
 			// platform didn't move and were aligned with the Spatial cellular grid.
 
-			if platforms := check.ObjectsByTags("platform"); len(platforms) > 0 {
+			if platforms := check.ObjectsByTags(domain.ObjectTagOneWayUp); len(platforms) > 0 {
 
 				platform := platforms[0]
 
@@ -230,7 +237,8 @@ func UpdatePlayer(ecs *ecs.ECS) {
 			// We use ContactWithObject() here because otherwise, we might come into contact with the moving platform's cells (which, naturally,
 			// would be selected by a Collision.ContactWithCell() call because the cell is closest to the Player).
 
-			if solids := check.ObjectsByTags("solid"); len(solids) > 0 && (player.OnGround == nil || player.OnGround.Y >= solids[0].Y) {
+			if solids := check.ObjectsByTags(domain.ObjectTagSolid); len(solids) > 0 && (player.OnGround == nil || player.OnGround.
+				Y >= solids[0].Y) {
 				dy = check.ContactWithObject(solids[0]).Y()
 				player.SpeedY = 0
 
@@ -242,7 +250,7 @@ func UpdatePlayer(ecs *ecs.ECS) {
 			}
 
 			if player.OnGround != nil {
-				player.WallSliding = nil    // Player's on the ground, so no wallsliding anymore.
+				player.WallSliding = nil    // Player's on the ground, so no wall-sliding anymore.
 				player.IgnorePlatform = nil // Player's on the ground, so reset which platform is being ignored.
 			}
 
@@ -259,7 +267,7 @@ func UpdatePlayer(ecs *ecs.ECS) {
 	}
 
 	// If the wall next to the Player runs out, stop wall sliding.
-	if c := playerObject.Check(wallNext, 0, "solid"); player.WallSliding != nil && c == nil {
+	if c := playerObject.Check(wallNext, 0, domain.ObjectTagSolid); player.WallSliding != nil && c == nil {
 		player.WallSliding = nil
 	}
 
