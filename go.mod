@@ -6,7 +6,7 @@ require (
 	github.com/fatih/color v1.15.0
 	github.com/golang/freetype v0.0.0-20170609003504-e2365dfdc4a0
 	github.com/hajimehoshi/ebiten/v2 v2.6.2
-	github.com/jackmordaunt/icns/v2 v2.2.6
+	github.com/jackmordaunt/icns/v2 v2.2.7
 	github.com/quartercastle/vector v0.2.0
 	github.com/stretchr/testify v1.8.4
 	github.com/tanema/gween v0.0.0-20221212145351-621cc8a459d1
@@ -35,7 +35,7 @@ require (
 	golang.org/x/mobile v0.0.0-20231006135142-2b44d11868fe // indirect
 	golang.org/x/sync v0.4.0 // indirect
 	golang.org/x/sys v0.13.0 // indirect
-	golang.org/x/text v0.13.0 // indirect
+	golang.org/x/text v0.14.0 // indirect
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
