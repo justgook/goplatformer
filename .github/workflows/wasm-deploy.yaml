@@ -30,7 +30,7 @@ jobs:
           cache-dependency-path: "**/*.sum"
       - name: Cache Aseprite
         id: cache-aseprite
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: aseprite
           key: ${{ runner.os }}-aseprite
