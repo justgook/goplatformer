@@ -5,7 +5,7 @@ go 1.21
 require (
 	github.com/fatih/color v1.15.0
 	github.com/golang/freetype v0.0.0-20170609003504-e2365dfdc4a0
-	github.com/hajimehoshi/ebiten/v2 v2.6.2
+	github.com/hajimehoshi/ebiten/v2 v2.6.5
 	github.com/jackmordaunt/icns/v2 v2.2.6
 	github.com/quartercastle/vector v0.2.0
 	github.com/stretchr/testify v1.8.4
